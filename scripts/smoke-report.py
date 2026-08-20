@@ -235,6 +235,27 @@ def test_resume_from_all_done():
     assert anomalies == [], "no gap when every stage is DONE"
 
 
+def test_resume_from_trailing_whitespace_done():
+    # A DONE marker with trailing whitespace (hand-edited report, the same scenario as
+    # test_append_trailing_whitespace_done_marker) must still be treated as DONE: recovery
+    # resumes at the first genuinely incomplete stage, not at an already-completed one.
+    text = (
+        "# Harness Task Report\n"
+        "> **Final status**: 🔄 in progress\n"
+        "<!-- PHASE: init DONE -->\n"
+        "<!-- PHASE: implementation DONE --> \n"  # trailing space after the marker
+        "<!-- PHASE: quality-gate -->\n"
+    )
+    phase, anomalies = resume_from(text)
+    assert phase == "quality-gate", "resume must skip the trailing-ws DONE stage, got {!r}".format(phase)
+    assert anomalies == [], "a trailing-ws DONE before a non-DONE is not an out-of-order gap"
+    # Same report, but every stage DONE (one with trailing whitespace): nothing left to resume.
+    all_done = text.replace("<!-- PHASE: quality-gate -->", "<!-- PHASE: quality-gate DONE --> ")
+    phase, anomalies = resume_from(all_done)
+    assert phase == "<none>", "trailing-ws DONE markers must not leave phantom incomplete stages"
+    assert anomalies == [], "no gap when every stage is DONE (trailing whitespace included)"
+
+
 def test_close_status():
     open_report = (
         "# Harness Task Report\n\n"
@@ -399,6 +420,7 @@ def main() -> int:
         ("interruption recovery", test_resume_from_last_done),
         ("interruption recovery (out-of-order DONE gap)", test_resume_from_out_of_order),
         ("interruption recovery (all stages done)", test_resume_from_all_done),
+        ("interruption recovery (trailing-ws DONE marker)", test_resume_from_trailing_whitespace_done),
         ("report closing status", test_close_status),
         ("overwrite guardrail read-first", test_write_requires_read),
         ("report directory creation", test_report_dir_creation),

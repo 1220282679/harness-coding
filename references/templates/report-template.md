@@ -64,11 +64,11 @@ Each stage writes at the corresponding `<!-- PHASE: xxx -->` marker — the mark
 
 | phase | corresponding step | content to write |
 |-------|--------------------|------------------|
-| `init` | report initialization | take the max version N over **this task's** reports (per-task naming, see the header note); newest such report has `final status=🔄 in progress` → **ask the user continue/abandon** (`ask_user` unavailable → default `abandon`, leaving the in-progress report untouched): continue → resume the existing report (recovery), abandon → create `v<N+1>`; create the new file **exclusively** (create-fail-if-exists; on collision — a concurrent session claimed it — retry with `v<N+2>`, never overwrite); create the skeleton (title/metadata/phase markers); on interruption recovery, resume from the earliest non-DONE stage and append a recovery note (out-of-order gaps — a non-DONE marker before a later `DONE` — recorded as anomalies) |
+| `init` | report initialization | take the max version N over **this task's** reports (per-task naming, see the header note); newest such report has `final status=🔄 in progress` → **ask the user continue/abandon** (`ask_user` unavailable → default `abandon`): continue → resume the existing report (recovery), abandon → mark the in-progress report `❌ abandoned` (a header-status-line edit; stage content left untouched, so it no longer re-triggers the continue/abandon prompt) and create `v<N+1>`; create the new file **exclusively** (create-fail-if-exists; on collision — a concurrent session claimed it — re-glob and retry with the next version, never overwrite); create the skeleton (title/metadata/phase markers); on interruption recovery, resume from the earliest non-DONE stage and append a recovery note (out-of-order gaps — a non-DONE marker before a later `DONE` — recorded as anomalies) |
 | `positioning` | 1 positioning | input = user's original requirement, output = tier verdict + ownership + architecture decision |
 | `exploration` | 2 exploration | input = dispatch prompt, output = explorer report |
-| `plan` | 3 plan | when an architecture decision is involved, output plan highlights + user confirmation; otherwise write "no architecture decision, skipped" |
-| `isolation` | 4 isolation | output branch/worktree path; write "skipped" if no code changes |
+| `plan` | 3 plan | when an architecture decision is involved, output plan highlights + user confirmation; otherwise write "no architecture decision" (the stage ran but has no content — distinct from the "(📋 skipped)" channel-skip marker, which means the channel does not execute the stage at all) |
+| `isolation` | 4 isolation | output branch/worktree path; write "no code changes" when the task changes no code |
 | `implementation` | 5 implementation | input = dispatch prompt, output = implementer's four-part report (change list + verification + self-test checklist + remaining) |
 | `quality-gate` | 6 quality gate | summary of the four quality-gate command outputs (code block); on failure append the fix-loop table |
 | `review` | 7 review | input = review scope, output = reviewer Findings; on rejection append the loop table |
@@ -88,10 +88,15 @@ Each stage writes at the corresponding `<!-- PHASE: xxx -->` marker — the mark
 
 ## Closing (summary stage)
 
+The summary stage closes the report in **two steps**: (1) append the stats block at the bottom, and
+(2) flip the **header** status line `> **Final status**: 🔄 in progress` → `> **Final status**: ✅ passed` /
+`> **Final status**: ❌ rejected` — a header-metadata-line edit per `write-report.md` step 8, **not** part of
+the appended block (the status line sits in the header, outside the phase markers). `❌ abandoned` is also a
+valid closing status when an in-progress report is abandoned at init (see the `init` row).
+
 ```markdown
 > 📊 Stats: total duration | role calls X | quality-gate retries X | review rejections X
 > 📅 Completed: YYYY-MM-DD
-> **Final status**: ✅ passed / ❌ rejected
 ```
 
 > Archive: when reports under `<report.dir>` (default `harness-reports/`) exceed 20, the orchestrator reminds to move them into `<report.dir>archive/` (default `harness-reports/archive/`, keeping the 2 most recently modified) at the summary stage. `<report.dir>` must end with a trailing slash (as the defaults do) so the archive path concatenates correctly. The report is for traceability only; it does not affect task execution.

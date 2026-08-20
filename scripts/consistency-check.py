@@ -280,6 +280,22 @@ PROTOCOL_INVARIANTS = [
         "references/templates/write-report.md",
         "scripts/report_lib.py",
     ]),
+    # Two precise "report not persisted" markers (inline-only vs write anomaly) — every doc that
+    # should carry a marker must use the exact literal; a shorthand like a bare "⚠️ report not
+    # persisted" would otherwise silently drift from the code's INLINE_MARKER constant.
+    ("inline-only report marker", "⚠️ report not persisted (inline-only)", [
+        "SKILL.md",
+        "README.md",
+        "references/capability-contract.md",
+        "references/templates/write-report.md",
+        "scripts/report_lib.py",
+    ]),
+    ("write-anomaly report marker", "⚠️ report not persisted — write anomaly", [
+        "SKILL.md",
+        "README.md",
+        "references/capability-contract.md",
+        "references/templates/write-report.md",
+    ]),
 ]
 
 

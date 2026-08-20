@@ -9,7 +9,7 @@ description: The filled-in adapter layer for the opencode harness. Maps the 8 re
 >
 > Generated from `references/adapters/_adapter-template.md`; the "how to generate" section has been removed.
 >
-> **Version note**: opencode's tool surface and config schema evolve across releases; the tool names in this file (`tool.read` / `tool.write` / `tool.edit` / `tool.apply_patch` / `tool.bash` / `tool.grep` / `tool.glob` / `tool.list` / `tool.question` / `tool.task` / `tool.skill`) follow the current convention as of this writing. The authoritative set is the live tool catalogue of the current session (`opencode --help`, the tool list, or the tool catalogue) — never assume a tool exists without confirming.
+> **Version note**: opencode's tool surface and config schema evolve across releases; the tool names in this file (`tool.read` / `tool.write` / `tool.edit` / `tool.apply_patch` / `tool.bash` / `tool.grep` / `tool.glob` / `tool.list` / `tool.question` / `tool.task` / `tool.skill`) follow the current convention as of this writing. Directory-read behavior changed in **v1.1.60** (Feb 2026): `tool.read` lists directory contents natively — see §8. The authoritative set is the live tool catalogue of the current session (`opencode --help`, the tool list, or the tool catalogue) — never assume a tool exists without confirming.
 
 ---
 
@@ -19,7 +19,7 @@ description: The filled-in adapter layer for the opencode harness. Maps the 8 re
 
 | Capability | Implementation in opencode | Notes |
 |------------|-----------------------------|-------|
-| `read` | **tool.read** | Returns file content tagged with line numbers. **Deviation**: directory reads are NOT supported → use **tool.list** (see §8) |
+| `read` | **tool.read** | Returns file content tagged with line numbers; also lists directory contents on opencode v1.1.60+ (the contract's directory-read semantics is met natively). **tool.list** remains available for explicit directory browsing (see §8) |
 | `write` | **tool.write** | Create / overwrite a file; gated by the `edit` permission key. Read-before-overwrite is a contract convention, **not enforced** by opencode → follow it manually (see §8) |
 | `edit` | **tool.edit** (string replacement) or **tool.apply_patch** (unified diff) | Unique-match rule: a `tool.edit` with multiple matches needs a narrower context; `tool.apply_patch` accepts a full diff. Both gated by the `edit` permission key |
 | `glob` | **tool.glob** | pattern-match file listing |
@@ -103,7 +103,7 @@ description: The filled-in adapter layer for the opencode harness. Maps the 8 re
 
 | Contract semantics | opencode reality | Handling |
 |--------------------|------------------|----------|
-| `read` on a directory returns an entry list | `tool.read` reads a single file | directory listing is performed via **tool.list**; `read` semantics are narrowed to files only |
+| `read` on a directory returns an entry list | `tool.read` lists directory contents on v1.1.60+ (opencode PR #13090); older builds read a single file only | the contract's directory-read semantics is met natively on current builds; on older builds fall back to **tool.list** for directory browsing |
 | read-before-overwrite guardrail | not enforced by the harness | the orchestrator must `read` the target before overwriting; record it in the report if skipped |
 | sub-agent environment | subagents can use only built-in tools (MCP tools need a bridge plugin) | the three roles only need built-in tools, so no workaround is required |
 | `ask_user` with structured 2~4 options | `tool.question` asks mid-execution; structured option lists depend on the harness version | map `question` → the contract's ask; when unavailable, degrade per §5 |

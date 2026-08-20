@@ -27,7 +27,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness. Maps 
 | `run_command` | **shell** / **shell_command** tool | The only channel for quality gates. Execution is gated by the harness's approval flow in the interactive TUI |
 | `ask_user` | interactive TUI approval prompts (+ optional MCP elicitation) | **No structured 2~4-option primitive in the core.** Interactive mode: the user reviews/approves every command and file change via the TUI approval prompt. A Claude-Code-style AskUserQuestion can be added via the `mcp-ask-user-question` MCP server (interactive only). Headless `codex exec`: no human in the loop → degrade per §5 |
 | `write_report` | **read_file** + **apply_patch** simulation | No dedicated report primitive → simulate per `references/templates/write-report.md` (locate marker → append → replace with DONE) |
-| `spawn_agent` | **spawn_agent** / **wait_agent** / **close_agent** (optional) | Requires the sub-agent feature: set `[features] multi_agent = true` in `~/.codex/config.toml` (recent builds may enable it by default; official docs still list it as experimental/opt-in, so the flag is harmless either way). Subagents defined as TOML files in `~/.codex/agents/` (global) / `.codex/agents/` (project) (built-ins `default` / `explorer` / `worker`). Without the feature → inline per §5 |
+| `spawn_agent` | **spawn_agent** / **wait_agent** / **close_agent** (optional) | Requires the sub-agent feature: multi-agent went GA in CLI **0.115.0 (Mar 2026)** and is enabled by default on current builds, so setting `[features] multi_agent = true` in `~/.codex/config.toml` is usually unnecessary (and harmless). Subagents defined as TOML files in `~/.codex/agents/` (global) / `.codex/agents/` (project) (built-ins `default` / `explorer` / `worker`). Without the feature → inline per §5 |
 | `create_branch` | **shell** `git checkout -b <name>`, or native **git** tool (optional) | No worktree primitive; a worktree = `shell` + `git worktree add` |
 | `check_command` | **shell** `command -v <cmd>` (optional) | run once to decide |
 | `run_quality_gate` | **shell** running the four gates serially (optional) | no bundled primitive; run each via shell and combine |
@@ -45,7 +45,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness. Maps 
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 
-> Requires the sub-agent feature (`[features] multi_agent = true` in `~/.codex/config.toml`; recent builds may enable it by default — the flag is harmless either way); otherwise the roles degrade to inline execution in the orchestrator (responsibilities and output contracts stay unchanged).
+> Requires the sub-agent feature (GA since CLI **0.115.0**, Mar 2026, enabled by default on current builds; `[features] multi_agent = true` in `~/.codex/config.toml` is usually unnecessary and harmless); otherwise the roles degrade to inline execution in the orchestrator (responsibilities and output contracts stay unchanged).
 
 | Role | Agent type in Codex | Notes |
 |------|----------------------|-------|
@@ -88,7 +88,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness. Maps 
 >
 > **First-run setup (one-time, machine-level)**: the harness config lives in `~/.codex/config.toml` (global) or project `.codex/config.toml`; the report config is independent of it. To run the full harness flow under Codex:
 >
-> 1. **Enable sub-agent dispatch** — set `[features] multi_agent = true` in `~/.codex/config.toml` to be sure (recent builds may enable it by default; official docs still list the flag as experimental/opt-in, so setting it is harmless either way). `shell_tool` is a stable default-on feature — no need to touch it. Without the feature, `spawn_agent` degrades to inline execution per §5
+> 1. **Enable sub-agent dispatch** — multi-agent is GA and enabled by default since CLI **0.115.0 (Mar 2026)**; on older builds set `[features] multi_agent = true` in `~/.codex/config.toml` (harmless either way). `shell_tool` is a stable default-on feature — no need to touch it. Without the feature, `spawn_agent` degrades to inline execution per §5
 > 2. **Structured `ask_user` (interactive only)** — `codex mcp add ask-user-question -- npx -y mcp-ask-user-question` (verify the server name and command at setup time with `codex mcp list` — the exact package may change); headless `codex exec` has no human in the loop → degrade per §5
 > 3. **Restart Codex** after editing `config.toml` or adding skills / agents — changes only take effect on restart
 >
@@ -98,6 +98,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness. Maps 
 > # ~/.codex/rules/default.rules
 > prefix_rule(pattern = ["python", "scripts/consistency-check.py"], decision = "allow", justification = "harness-coding dev-time validator")
 > prefix_rule(pattern = ["python", "scripts/smoke-report.py"], decision = "allow", justification = "harness-coding dev-time validator")
+> prefix_rule(pattern = ["python", "scripts/workflow-check.py"], decision = "allow", justification = "harness-coding dev-time validator")
 > ```
 >
 > Test with `codex execpolicy check --rules ~/.codex/rules/default.rules -- python scripts/consistency-check.py`. Note: execpolicy is still in preview and its API may change; without such rules, running the validators pauses for approval as usual.

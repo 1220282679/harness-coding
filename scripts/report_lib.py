@@ -185,7 +185,10 @@ def resume_from(text: str) -> tuple[str, list[str]]:
         m = PHASE_RE.search(line)
         if not m:
             continue
-        if line.endswith("DONE -->"):
+        # DONE state comes from the regex match group, not `line.endswith`: a hand-edited
+        # report may carry trailing whitespace after a DONE marker, which would otherwise be
+        # misread as non-DONE and resume at an already-completed stage. Mirrors append_phase.
+        if m.group(0).endswith("DONE -->"):
             done_idx.append(i)
         else:
             todo.append((i, m.group(1)))
@@ -202,8 +205,9 @@ def resume_from(text: str) -> tuple[str, list[str]]:
 
 def close_report(text: str, status: str) -> str:
     """Close the report at the summary stage: replace the header metadata status line
-    (`🔄 in progress` -> `✅ passed` / `❌ rejected`). This is a metadata-line edit, not a
-    phase-marker append — the status line sits in the header, outside the phase markers."""
+    (`🔄 in progress` -> `✅ passed` / `❌ rejected`, or `❌ abandoned` when an in-progress
+    report is abandoned per the init continue/abandon rule). This is a metadata-line edit,
+    not a phase-marker append — the status line sits in the header, outside the phase markers."""
     old = "**Final status**: 🔄 in progress"
     new = "**Final status**: {}".format(status)
     if old not in text:

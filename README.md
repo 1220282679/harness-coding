@@ -124,7 +124,7 @@ harness-coding/
 | 🔴 **完整** | 跨文件重构 / 新功能 / 架构变更 / 涉及端口、事件或表结构 |
 | 📋 **仅结论** | 代码评审 / 只读评估，交付物是分级的 Findings 文档（不改代码） |
 
-**判定规则**：符合 🟢 类别列表（≤1 文件、无架构影响）→ 🟢；其他单文件或小型双文件变更 → 🟡；3 个及以上文件或涉及架构决策 → 🔴；交付物为 Findings 文档的评审/评估任务 → 📋。
+**判定规则**：符合 🟢 类别列表（≤1 文件、无架构影响）→ 🟢；其他单文件或小型双文件变更 → 🟡；3 个及以上文件或涉及架构决策 → 🔴（例外：符合 🟢 类别且无架构影响的微改，无论文件数只升级到 🟡——跨多文件的 typo/import 修复不属于完整流程级变更）；交付物为 Findings 文档的评审/评估任务 → 📋，无代码变更的计划/设计交付物也归 📋（计划成为评审阶段输出）。
 
 **升级条款**：单文件变更超过 50 行业务逻辑 → 自动升级为 🟡（即使形似 🟢 类别）；若同时涉及架构决策 → 升级为 🔴。
 
@@ -156,7 +156,7 @@ harness-coding/
 
 > 质量门禁失败循环：先定位根因再修复（禁止盲目尝试）→ 回到实现 → 重跑。不跳过任何步骤，不隐藏任何失败。
 >
-> **隔离降级**：worktree/分支创建失败（如 Windows+uv 下的 venv 损坏、无 git 权限）→ 降级为主仓库的功能分支，或直接在主线工作区修改；报告标注"not isolated: <原因>"；环境障碍不阻断流程。
+> **隔离降级**：worktree/分支创建失败（如 Windows+uv 下的 venv 损坏、无 git 权限）→ 降级为主仓库的功能分支，或直接在主线工作区修改；报告标注 `not isolated (<原因>)`（如 `not isolated (venv corruption)`），与契约的 `not isolated (no branch capability)` 形式一致；环境障碍不阻断流程。
 
 ## 角色
 
@@ -187,7 +187,7 @@ lint   → format   → type check   → test
 > 一份逐阶段、完全可追溯的报告。与 `harness-reporting` 类似，但绑定的是能力契约而非具体工具。
 
 1. **命名**：`<report.prefix>-<slug>-v<N>.md`，默认 `harness-task-<slug>-v<N>.md`（无 slug 时 `harness-task-v<N>.md`）。`v<N>` 中的 `N` 必须是纯整数且**按任务解析**——glob 该任务自己的报告取最大值 +1（新任务为 0）
-2. **初始化**：glob 该任务历史报告 → 取最大版本 N；若该任务最新报告仍是"🔄 in progress"，**先询问用户继续还是放弃**，绝不静默覆盖；新建文件**排他创建**，遇并发冲突以 `v<N+2>` 重试
+2. **初始化**：glob 该任务历史报告 → 取最大版本 N；若该任务最新报告仍是"🔄 in progress"，**先询问用户继续还是放弃**，绝不静默覆盖；放弃 → 将 in-progress 报告标记为 `❌ abandoned`（仅改头部状态行，阶段内容原样保留，不再重复触发询问）后新建 `v<N+1>`；新建文件**排他创建**，遇并发冲突重 glob 后以**下一个版本号**重试，绝不覆盖并发报告
 3. **增量追加**：每阶段完成后，用阶段内容 + 尾部 `DONE` 标记替换对应阶段标记
 4. **故障优先**：静默写失败不阻断主流程，但必须显式打印"⚠️ report not persisted — write anomaly"警告
 5. **恢复**：会话中断后从第一个非 `DONE` 标记（最早未完成阶段）继续；乱序缺口记录为恢复异常，绝不静默跳过
@@ -305,7 +305,7 @@ lint   → format   → type check   → test
 | [scripts/smoke-report.py](scripts/smoke-report.py) | 报告协议冒烟验证：版本解析 / 标记追加与 DONE 替换 / 相邻标记不复制 / 截断 / 恢复 / 关闭 / 写保护 / 目录创建 / 内联模式 / 归档 / 并发冲突防护 | `python scripts/smoke-report.py` |
 | [scripts/workflow-check.py](scripts/workflow-check.py) | 分级通道端到端生命周期验证：🟢/🟡/🔴/📋 各通道报告形态 + 与 SKILL.md "Skips:" 声明的交叉校验 | `python scripts/workflow-check.py` |
 | [scripts/consistency-check.py](scripts/consistency-check.py) | 跨文档一致性验证：frontmatter / 内部引用 / 能力用法 / 角色模板 / 阶段集 / 适配器映射 / 报告协议不变量 | `python scripts/consistency-check.py` |
-| [scripts/report_lib.py](scripts/report_lib.py) | 报告协议机械规则的**单一实现源**，被 smoke 与 workflow 两个脚本共同引用，防止文档与验证器漂移 | 库模块，被上三者导入 |
+| [scripts/report_lib.py](scripts/report_lib.py) | 报告协议机械规则的**单一实现源**，被 smoke 与 workflow 两个脚本共同引用，防止文档与验证器漂移 | 库模块，被 smoke-report 与 workflow-check 导入 |
 
 > 任何 PASS 打印后退出码为 0；任何 FAIL 退出码为 1。Windows 控制台在 GBK 下会乱码，可先设置 `PYTHONIOENCODING=utf-8`（脚本自身已尝试强制 UTF-8）。
 >
@@ -326,4 +326,4 @@ lint   → format   → type check   → test
 2. 架构决策必须在动代码前用 `ask_user` 确认
 3. 评审前全部质量门禁必须绿灯；被拒评审走完整循环，不跳过步骤
 4. 编排器自身不得编写大型实现与测试（实现与测试归实现角色）
-5. 绝不隐藏质量门禁 / 测试失败；输出契约按通道的报告深度交付（🟢 简化 / 🟡·🔴·📋 完整五段）
+5. 绝不隐藏质量门禁 / 测试失败；输出契约按通道的报告深度交付（🟢 简化 / 🟡 完整五段 / 🔴 完整五段 + 评审结论 + 安全评审 / 📋 完整五段且变更清单写"无 — 仅结论"）
