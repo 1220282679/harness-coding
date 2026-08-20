@@ -111,7 +111,7 @@ harness-coding/
 
 **分类记录（可审计）**：每次分类产出一行记录 `<判定> — verb: <动词>; noun: <名词>; deliverable: <yes/no>`。工作判定必须在定位阶段被记录在报告中，否则视为协议违规。
 
-**多轮会话处理**：每条用户消息后重跑分类；意图升级 → 触发报告初始化；同一任务链的后续变更**复用已打开的 in-progress 报告**（追加到对应阶段），不重新初始化；工作结束时关闭报告。
+**多轮会话处理**：每条用户消息后重跑分类；同一任务链的后续变更**复用已打开的 in-progress 报告**（追加到对应阶段），不重新初始化；工作结束时关闭报告。**跨通道意图升级**：若后续消息把任务通道提升（如 🟢 → 🟡/🔴），低通道报告无法承载升级后的流程（其跳过阶段已 `(<通道> skipped)` DONE 且不可覆盖）——将低通道报告标为 `❌ abandoned`（原因 "channel upgraded to <新通道>"）并按新通道新建 `v<N+1>`；同通道后续复用原报告，升级后不降级。
 
 **`ask_user` 降级**：当当前 Harness/上下文无法交互式提问时，自行选择最保守的选项并在报告中记录"⚠️ 无法询问用户；已按保守选项决定"，绝不假装用户已确认。
 
@@ -137,7 +137,7 @@ harness-coding/
 | 🔴 完整 | 10 步 | 见[主流程](#主流程完整通道) | 无 |
 | 📋 仅结论 | 3 步 | 定位 → 评审 → 总结 | 计划、隔离、实现、质量门禁、验证、合并（探索可选） |
 
-> **跳过阶段留痕**：被 🟢/🟡/📋 通道跳过的阶段，在报告中写作"(🟢/🟡/📋 skipped)"并标记 `DONE`，不展开内容。唯一例外是 🟢 下的**定位**：级别判定内联记录在定位阶段标记中，这是每个通道都会记录的一个阶段。
+> **跳过阶段留痕**：被 🟢/🟡/📋 通道跳过的阶段，在报告中写作 `(<通道> skipped)`（如 `(🟡 skipped)`）并标记 `DONE`，不展开内容。唯一例外是 🟢 下的**定位**：级别判定内联记录在定位阶段标记中，这是每个通道都会记录的一个阶段。
 >
 > **成本提示**：派发子代理 + 四道质量门禁有 token 与延迟成本。🟢/🟡 通道避免重复全量运行与重复派发；同轮可复用的质量门禁输出要复用；无理由不升级通道。
 >
@@ -317,7 +317,7 @@ lint   → format   → type check   → test
 >
 > **配置边界**：验证器针对**默认运行时配置**（`report.prefix=harness-task` / `report.dir=harness-reports/`）校验报告协议；若某项目在适配器层覆盖了这两项，验证器不再覆盖新的命名约定（属预期——覆盖配置由该适配器自行验证，见[能力契约](references/capability-contract.md)运行时配置一节）。
 >
-> **权限配置**：仓库自带的 `opencode.json` 与 `.claude/settings.json` 放行验证脚本（`python scripts/smoke-report.py` / `workflow-check.py` / `consistency-check.py`）及退出码回读（`echo exit=$?`），可在对应 Harness 中非交互运行验证器。
+> **权限配置**：仓库自带的 `opencode.json` 与 `.claude/settings.json` 放行验证脚本（`python scripts/smoke-report.py` / `workflow-check.py` / `consistency-check.py`）及退出码回读（`echo exit=$?`），可在对应 Harness 中非交互运行验证器。注意：放行规则只覆盖裸 `python scripts/...` 调用——如需 `PYTHONIOENCODING=utf-8` 前缀，请先用 `export` 设置环境变量，或单独放行带前缀的命令。
 
 ## 使用前置条件
 
@@ -325,6 +325,8 @@ lint   → format   → type check   → test
 2. 从 [references/adapters/](references/adapters/) 加载当前 Harness 的适配器层（缺失时按 [_adapter-template.md](references/adapters/_adapter-template.md) 生成），并确认每项能力对应的具体工具——**复核适配器中的版本敏感声明**（工具名 / 配置键 / 特性开关 / 版本注记），以当前会话的实时工具目录为准，因为适配器工具面会随版本演进
 3. 确认项目的质量门禁命令（lint / format / type / test，通过 `run_command` 能力执行）
 4. 确认角色代理类型（explorer / implementer / reviewer）已在 Harness 注册；未注册则降级为通用子代理或由编排器内联执行（职责与输出契约不变）
+
+> **接入成本提醒**：接入一个新 Harness 的实质工作量 = 适配器文件 + 移植 [references/templates/write-report.md](references/templates/write-report.md) 的参考实现。仅凭 read/write/bash 三件套不足以自动获得报告协议——`write_report` 的标记骨架 / DONE 替换 / 截断 / 恢复 / 关闭需按参考实现落地。
 
 ## 约束
 

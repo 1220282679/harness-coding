@@ -74,6 +74,7 @@ description: The generic adapter template for harness-coding. When onboarding a 
 
 | Missing capability | Degradation behavior in this harness | Report annotation |
 |--------------------|--------------------------------------|-------------------|
+| `ask_user` (headless / no interactive primitive) | fill-in — pick the most conservative option (fewest irreversible side effects) and record it; never pretend the user confirmed | ⚠️ unable to ask the user; decided on the conservative option |
 | `spawn_agent` | fill-in | no sub-agent, inline execution |
 | `create_branch` | fill-in | not isolated (no branch capability) |
 | `check_command` | fill-in | none |

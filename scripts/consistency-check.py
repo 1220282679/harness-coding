@@ -311,6 +311,13 @@ PROTOCOL_INVARIANTS = [
     # Two precise "report not persisted" markers (inline-only vs write anomaly) — every doc that
     # should carry a marker must use the exact literal; a shorthand like a bare "⚠️ report not
     # persisted" would otherwise silently drift from the code's INLINE_MARKER constant.
+    # The channel-skip marker literal: docs use the concrete `(<channel> skipped)` form (example
+    # `(🟡 skipped)`), which must match what workflow-check.py generates ("({} skipped)").
+    ("channel skip marker", "(🟡 skipped)", [
+        "SKILL.md",
+        "README.md",
+        "references/templates/report-template.md",
+    ]),
     ("inline-only report marker", "⚠️ report not persisted (inline-only)", [
         "SKILL.md",
         "README.md",

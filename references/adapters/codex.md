@@ -109,7 +109,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness. Maps 
 |---------------------|--------------------------|--------|
 | read / write / edit / glob / grep | §1 table (read_file / apply_patch / rg / glob_file_search) | ☑ |
 | run_command | §1 table (shell / shell_command) | ☑ |
-| ask_user | §1 table (interactive approval prompts + optional MCP elicitation) | ☑ |
+| ask_user | §1 table (interactive TUI approval prompts + optional MCP elicitation) | ☐* — interactive only, no structured 2~4-option primitive in the core; headless `codex exec` degrades per §5 (see §8) |
 | write_report | §1 table (read_file + apply_patch simulation per templates/write-report.md) | ☑ |
 
 > All checked → the adapter layer is ready; you can run the SKILL.md main flow.

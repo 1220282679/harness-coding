@@ -279,7 +279,9 @@ def test_close_status():
 
 
 def test_write_requires_read():
-    # Contract §2: must have read a file before writing over it (prevent accidental destruction). Fake tools simulate the guardrail.
+    # Contract §2: must have read a file before writing over it (prevent accidental destruction).
+    # DEMONSTRATIVE, not a protocol assertion: the read-before-write guardrail is a harness-side
+    # convention (report_lib itself does not enforce it); this test documents the expected contract.
     class FakeStore:
         def __init__(self) -> None:
             self.files: dict[str, str] = {"harness-reports/harness-task-v1.md": "old"}
@@ -312,7 +314,9 @@ def test_report_dir_creation():
     # Contract §8 / templates/write-report.md: the report directory must exist before the
     # first write. A filesystem that does not auto-create parent dirs (e.g. apply_patch-based
     # harnesses) requires an explicit mkdir first; a write into a missing dir must not
-    # silently drop the report. Simulate that guardrail.
+    # silently drop the report. DEMONSTRATIVE, not a protocol assertion: mkdir-first is a
+    # harness-side convention (report_lib does not create directories); the test documents
+    # the expected contract.
     class Fs:
         def __init__(self) -> None:
             self.dirs: set[str] = set()

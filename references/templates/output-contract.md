@@ -32,6 +32,8 @@ description: The final-report output contract template for harness-coding. Repor
 - <conditional skills this skill loaded and their trigger stages, listed one by one>
 ```
 
+> **`Verification Results` ≠ the `verification` phase**: the output contract's `## Verification Results` section is a summary section of the final report and is present for every channel; it is distinct from the `verification` phase marker in the report skeleton, which only the 🔴 channel executes (on 🟢/🟡/📋 that phase is written as a `(<channel> skipped)` marker). A present `Verification Results` section does not mean the `verification` phase ran.
+
 ## Per-channel report depth
 
 | Channel | Report depth |

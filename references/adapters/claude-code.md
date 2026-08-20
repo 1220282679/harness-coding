@@ -69,6 +69,7 @@ description: The filled-in adapter layer for the Claude Code harness. Maps the 8
 
 | Missing capability | Degradation behavior in Claude Code | Report annotation |
 |--------------------|-------------------------------------|-------------------|
+| `ask_user` (headless, e.g. `claude -p`) | pick the most conservative option (fewest irreversible side effects) and record it; never pretend the user confirmed | `⚠️ unable to ask the user; decided on the conservative option` |
 | `spawn_agent` | the orchestrator executes roles inline | `no sub-agent, inline execution` |
 | `create_branch` | change directly on the main workspace | `not isolated (no branch capability)` |
 | `check_command` | run once to decide | none |
