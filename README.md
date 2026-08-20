@@ -196,7 +196,7 @@ lint   → format   → type check   → test
 
 > 报告仅供追溯，不影响任务执行。归档：报告超过 20 份时提醒移入 `<report.dir>archive/`（默认 `harness-reports/archive/`，保留最近修改的 2 份）。
 >
-> **磁盘开关**：能力契约配置 `report.on_disk=false` 时，报告仅内联输出、不写盘（适用于 🟢 轻量通道或临时会话）；内联输出必须携带显式"⚠️ report not persisted (inline-only)"标记。
+> **磁盘开关**：能力契约配置 `report.on_disk=false` 时，报告仅内联输出、不写盘（适用于 🟢 轻量通道或临时会话）；内联输出必须携带显式"⚠️ report not persisted (inline-only)"标记。内联模式下无盘上骨架，输出即通道报告深度按阶段顺序渲染：🟢 只输出简化摘要（变更清单 + 验证结果，无跳过标记）；🟡/🔴/📋 输出执行阶段 + 跳过的 `(通道 skipped)` DONE 标记，保持全深度可追溯。
 
 `write_report` 的自包含最小实现（read/write/edit 组合）见 [references/templates/write-report.md](references/templates/write-report.md)。
 
@@ -316,7 +316,7 @@ lint   → format   → type check   → test
 ## 使用前置条件
 
 1. 当前 Harness 满足能力契约的**必需能力**（见 [references/capability-contract.md](references/capability-contract.md)）
-2. 从 [references/adapters/](references/adapters/) 加载当前 Harness 的适配器层（缺失时按 [_adapter-template.md](references/adapters/_adapter-template.md) 生成），并确认每项能力对应的具体工具
+2. 从 [references/adapters/](references/adapters/) 加载当前 Harness 的适配器层（缺失时按 [_adapter-template.md](references/adapters/_adapter-template.md) 生成），并确认每项能力对应的具体工具——**复核适配器中的版本敏感声明**（工具名 / 配置键 / 特性开关 / 版本注记），以当前会话的实时工具目录为准，因为适配器工具面会随版本演进
 3. 确认项目的质量门禁命令（lint / format / type / test，通过 `run_command` 能力执行）
 4. 确认角色代理类型（explorer / implementer / reviewer）已在 Harness 注册；未注册则降级为通用子代理或由编排器内联执行（职责与输出契约不变）
 

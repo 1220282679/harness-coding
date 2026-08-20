@@ -12,7 +12,7 @@ The master control flow that turns a one-line requirement into a deliverable cha
 ## Prerequisites
 
 1. The current harness satisfies the **required capabilities** of the capability contract (see `references/capability-contract.md`)
-2. Load the current harness's adapter layer from `references/adapters/` (if missing, generate it from `_adapter-template.md`) and confirm the concrete tool for each capability
+2. Load the current harness's adapter layer from `references/adapters/` (if missing, generate it from `_adapter-template.md`) and confirm the concrete tool for each capability — **re-verify version-sensitive adapter claims** (tool names / config keys / feature flags / version notes) against the current session's live tool catalogue, since adapter tool surfaces evolve between releases
 3. Confirm the project's quality-gate commands (lint / format / type / test, executed via the `run_command` capability)
 4. Confirm the role agent types (explorer / implementer / reviewer) are registered in the harness; if not, degrade to generic subagents or inline execution in the orchestrator (see "Role Mapping" in the adapter; responsibilities and output contracts stay unchanged)
 
@@ -48,7 +48,7 @@ The master control flow that turns a one-line requirement into a deliverable cha
 
 > The report is for traceability only; it does not affect task execution. Archive: when reports exceed 20, remind to move them into `<report.dir>archive/` (default `harness-reports/archive/`, derived per the report template, keeping the 2 most recently modified).
 >
-> **On-disk switch**: with capability-contract config `report.on_disk=false`, the report is inline-only, not written to disk—suited for the 🟢 light channel or temporary sessions; `write_report` degrades to no persistence and instead emits the stage content inline in the reply in stage order (versioning/recovery no longer apply; the closing status is kept in the final summary), the reporting protocol stays unchanged. Inline-only output must carry an explicit `⚠️ report not persisted (inline-only)` marker in the reply so a missing file is never mistaken for a silently dropped report. In inline-only mode there is **no on-disk skeleton**: skipped-stage markers follow the channel's report depth (omitted in the 🟢 simplified summary, retained in full-depth channels) and are emitted in stage order alongside the executed stages.
+> **On-disk switch**: with capability-contract config `report.on_disk=false`, the report is inline-only, not written to disk—suited for the 🟢 light channel or temporary sessions; `write_report` degrades to no persistence and instead emits the stage content inline in the reply in stage order (versioning/recovery no longer apply; the closing status is kept in the final summary), the reporting protocol stays unchanged. Inline-only output must carry an explicit `⚠️ report not persisted (inline-only)` marker in the reply so a missing file is never mistaken for a silently dropped report. In inline-only mode there is **no on-disk skeleton**: the inline output is the channel's report depth rendered in stage order — 🟢 emits only the simplified summary (change list + verification results, **no skipped-stage markers**); 🟡/🔴/📋 emit executed stages **plus** the `(🟢/🟡/📋 skipped)` `DONE` markers for skipped stages, so full-depth traceability is preserved in the reply.
 
 ## Tiered Channels
 
