@@ -1,0 +1,10 @@
+# Claude Code machine-local settings (per-session permission grants) —
+# not part of the skill bundle (see README).
+.claude/settings.local.json
+
+# harness-coding runtime reports (capability-contract report.dir, default harness-reports/)
+harness-reports/
+
+# Python bytecode caches (e.g. scripts/__pycache__)
+__pycache__/
+*.py[cod]

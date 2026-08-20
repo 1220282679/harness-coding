@@ -1,0 +1,10 @@
+{
+  "permission": {
+    "bash": {
+      "python scripts/smoke-report.py": "allow",
+      "python scripts/workflow-check.py": "allow",
+      "python scripts/consistency-check.py": "allow",
+      "echo exit*": "allow"
+    }
+  }
+}
