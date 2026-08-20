@@ -1,6 +1,8 @@
 ---
 name: harness-coding
-description: Universal harness-agnostic coding orchestration skill. Turns a one-line requirement into a controlled change flow via session classification, tiered channels (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), role dispatch (explorer / implementer / reviewer), quality gates, and a five-section report. Depends only on the capability contract and runs through any execution harness's adapter layer. Use when the user asks for new requirements, features, fixes, refactors, code review, schema changes, or any task needing on-disk changes—trigger proactively even if "harness" isn't mentioned explicitly; if uncertain, ask before deciding.
+version: 1.0.0
+license: MIT
+description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), dispatch roles (explorer / implementer / reviewer), enforce quality gates, and deliver a traceable five-section report. Harness-agnostic — depends only on a capability contract and runs through any execution harness's adapter layer. Trigger proactively even if the word "harness" is not mentioned; if uncertain, ask before deciding.
 ---
 
 # Role: Universal Harness Coding Orchestrator (harness-coding)

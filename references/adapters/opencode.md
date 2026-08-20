@@ -9,7 +9,7 @@ description: The filled-in adapter layer for the opencode harness. Maps the 8 re
 >
 > Generated from `references/adapters/_adapter-template.md`; the "how to generate" section has been removed.
 >
-> **Version note**: opencode's tool surface and config schema evolve across releases; the tool names in this file (`tool.read` / `tool.write` / `tool.edit` / `tool.apply_patch` / `tool.bash` / `tool.grep` / `tool.glob` / `tool.list` / `tool.question` / `tool.task` / `tool.skill`) follow the current convention as of this writing. Directory-read behavior changed in **v1.1.60** (Feb 2026): `tool.read` lists directory contents natively — see §8. The authoritative set is the live tool catalogue of the current session (`opencode --help`, the tool list, or the tool catalogue) — never assume a tool exists without confirming.
+> **Version note**: opencode's tool surface and config schema evolve across releases; the tool names in this file (`tool.read` / `tool.write` / `tool.edit` / `tool.apply_patch` / `tool.bash` / `tool.grep` / `tool.glob` / `tool.list` / `tool.question` / `tool.task` / `tool.skill`) follow the current convention as of this writing. Directory-read behavior changed in **v1.1.60** (Feb 2026): `tool.read` lists directory contents natively — see §8 (**last verified 2026-08-20**). The authoritative set is the live tool catalogue of the current session (`opencode --help`, the tool list, or the tool catalogue) — never assume a tool exists without confirming.
 
 ---
 

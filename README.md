@@ -13,6 +13,7 @@
 - [项目简介](#项目简介)
 - [核心思想](#核心思想)
 - [目录结构](#目录结构)
+- [安装](#安装)
 - [工作原理](#工作原理)
 - [会话分类](#会话分类)
 - [分级通道](#分级通道)
@@ -77,6 +78,20 @@ harness-coding/
     ├── workflow-check.py              # 分级通道端到端生命周期验证
     └── consistency-check.py           # 技能文档跨文档一致性验证
 ```
+
+## 安装
+
+把本技能包放到目标项目的技能目录，即可在该 Harness 中使用：
+
+| Harness | 安装路径 |
+|---------|----------|
+| Claude Code | `<project>/.claude/skills/harness-coding/`（或用户级 `~/.claude/skills/`） |
+| opencode | `<project>/.opencode/skills/harness-coding/`（或全局 `~/.config/opencode/skills/`） |
+| Codex | `<project>/.codex/skills/harness-coding/`（或全局 `~/.codex/skills/`） |
+
+> **分发打包**：建议用 `git archive`（或等价版本控制导出）而非整目录拷贝，以排除 `scripts/__pycache__/` 等运行时产物（`.gitignore` 已覆盖它们，但拷贝会带入）。
+>
+> **权限作用域**：仓库根自带的 `opencode.json` / `.claude/settings.json` 只在该技能仓库本身作为 Harness 工作目录时生效（开发验证用）。技能安装进宿主项目后，验证器的放行需在宿主项目自己的配置中声明（见"验证脚本"一节）。
 
 ## 工作原理
 
@@ -288,7 +303,7 @@ lint   → format   → type check   → test
 | 🟢 轻量 | 简化版：变更清单 + 验证结果（lint + format 实际执行并粘贴输出；type/test 按需） |
 | 🟡 标准 | 完整五段：定位 / 变更 / 验证 / 剩余 / 技能日志 |
 | 🔴 完整 | 完整五段 + 评审结论 + 安全评审（如有） |
-| 📋 仅结论 | 完整五段：变更清单写"无 — 仅结论"；验证段承载评审结论 + 分级 Findings |
+| 📋 仅结论 | 完整五段：变更清单写"无 — 仅结论"（计划/设计交付物写"无 — plan-only"）；验证段承载评审结论 + 分级 Findings（计划交付物改为承载计划校验结论） |
 
 ## 运行时配置
 
@@ -313,7 +328,7 @@ lint   → format   → type check   → test
 | [scripts/consistency-check.py](scripts/consistency-check.py) | 跨文档一致性验证：frontmatter / 内部引用 / 能力用法 / 能力拼写 / 角色模板 / 阶段集 / 适配器映射 / 报告协议不变量 / harness 权限配置 | `python scripts/consistency-check.py` |
 | [scripts/report_lib.py](scripts/report_lib.py) | 报告协议机械规则的**单一实现源**，被 smoke 与 workflow 两个脚本共同引用，防止文档与验证器漂移 | 库模块，被 smoke-report 与 workflow-check 导入 |
 
-> 任何 PASS 打印后退出码为 0；任何 FAIL 退出码为 1。Windows 控制台在 GBK 下会乱码，可先设置 `PYTHONIOENCODING=utf-8`（脚本自身已尝试强制 UTF-8）。
+> 任何 PASS 打印后退出码为 0；任何 FAIL 退出码为 1。consistency-check 的 WARN 项（如 SKILL.md 中无法识别的 capability 型标识符，属正常散文）**不置 FAIL**，仍以退出码 0 结束。Windows 控制台在 GBK 下会乱码，可先设置 `PYTHONIOENCODING=utf-8`（脚本自身已尝试强制 UTF-8）。
 >
 > **配置边界**：验证器针对**默认运行时配置**（`report.prefix=harness-task` / `report.dir=harness-reports/`）校验报告协议；若某项目在适配器层覆盖了这两项，验证器不再覆盖新的命名约定（属预期——覆盖配置由该适配器自行验证，见[能力契约](references/capability-contract.md)运行时配置一节）。
 >

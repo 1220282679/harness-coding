@@ -101,6 +101,22 @@ def next_version(files: list[str], slug: str = "") -> int:
     return max_task_version(files, slug) + 1
 
 
+# The documented slug form (write-report.md): a short kebab-case task identifier — lowercase
+# letters, digits, and single hyphens. Enforced in claim_filename as defense-in-depth: an
+# unsanitized slug (e.g. "../../evil") would otherwise escape the report directory.
+SLUG_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+
+
+def _safe_slug(slug: str) -> str:
+    if not slug:
+        return slug
+    if not SLUG_RE.fullmatch(slug):
+        raise ValueError(
+            "untrusted slug {!r}: only lowercase letters, digits, and single hyphens are allowed".format(slug)
+        )
+    return slug
+
+
 def claim_filename(
     files: list[str],
     slug: str = "",
@@ -116,6 +132,7 @@ def claim_filename(
     # report.dir must end with a trailing slash (capability-contract runtime config); normalize a
     # missing one so an override like "harness-reports" can never silently produce a bad filename.
     report_dir = report_dir if report_dir.endswith("/") else report_dir + "/"
+    slug = _safe_slug(slug)  # defense-in-depth: reject path traversal via the slug
     n = next_version(files, slug)
     while True:
         name = "{}{}-{}-v{}.md".format(report_dir, PREFIX, slug, n) if slug else "{}{}-v{}.md".format(report_dir, PREFIX, n)

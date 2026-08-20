@@ -415,6 +415,20 @@ def test_claim_filename_no_slug_and_slash():
     assert name2 == "harness-reports/harness-task-v0.md", "missing trailing slash normalized"
 
 
+def test_claim_filename_rejects_unsafe_slug():
+    # Defense-in-depth: an unsanitized slug that could escape the report directory (path
+    # traversal) must be rejected, never silently written outside it.
+    for bad in ["../../evil", "../up", "a/b", "..", "x/../y", "UPPER", "has space", "a--b", "-lead", "trail-"]:
+        try:
+            claim_filename([], slug=bad)
+            raised = False
+        except ValueError:
+            raised = True
+        assert raised, "unsafe slug {!r} must be rejected".format(bad)
+    assert claim_filename([], slug="add-rerank").endswith("add-rerank-v0.md"), "valid slug passes"
+    assert claim_filename([], slug="").endswith("harness-task-v0.md"), "no-slug passes"
+
+
 def test_embedded_marker_not_confused():
     # Content that merely quotes a phase marker (a skeleton example in prose) must never be
     # targeted by append_phase / resume_from — only standalone marker lines count.
@@ -544,6 +558,7 @@ def main() -> int:
         ("archive ranks by recency not version", test_archive_ranks_by_recency_not_version),
         ("collision guard (concurrent same-task init)", test_claim_filename_avoids_concurrent_collision),
         ("claim_filename no-slug + trailing-slash normalization", test_claim_filename_no_slug_and_slash),
+        ("claim_filename rejects unsafe (path-traversal) slug", test_claim_filename_rejects_unsafe_slug),
         ("content-quoted marker not confused", test_embedded_marker_not_confused),
         ("fenced marker not confused", test_fenced_marker_not_confused),
         ("agent-output non-heading # lines dropped", test_truncate_agent_script_comments_not_headings),

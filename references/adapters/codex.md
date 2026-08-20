@@ -9,7 +9,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness. Maps 
 >
 > Generated from `references/adapters/_adapter-template.md`; the "how to generate" section has been removed.
 >
-> **Version note**: Codex's tool surface has evolved through 2026 (early builds routed grep/glob through `shell`, composing `rg`/`find`; native `rg`, `glob_file_search`, `list_dir`, `git` tools have existed since the 2025/2026 builds). The tool names and feature flags below were verified against the stable line at **v0.147 (Aug 2026)**; the CLI ships several patch releases a month, so any version pin goes stale quickly. The table uses the current native names and marks the older/composed fallbacks. The authoritative set is the live tool catalogue of the current session (`codex --help`, the tool list, or `tool_search`) — never assume a tool exists without confirming.
+> **Version note**: Codex's tool surface has evolved through 2026 (early builds routed grep/glob through `shell`, composing `rg`/`find`; native `rg`, `glob_file_search`, `list_dir`, `git` tools have existed since the 2025/2026 builds). The tool names and feature flags below were verified against the stable line at **v0.147 (Aug 2026)** — **last verified 2026-08-20**; the CLI ships several patch releases a month, so any version pin goes stale quickly. The table uses the current native names and marks the older/composed fallbacks. The authoritative set is the live tool catalogue of the current session (`codex --help`, the tool list, or `tool_search`) — never assume a tool exists without confirming.
 
 ---
 
