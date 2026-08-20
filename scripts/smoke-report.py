@@ -266,6 +266,10 @@ def test_close_status():
     assert "**Final status**: ✅ passed" in closed
     assert "🔄 in progress" not in closed
     assert "**Architecture decision**: none" in closed, "close must not touch other header lines"
+    # An in-progress report abandoned at init closes to ❌ abandoned (header-status-line edit)
+    abandoned = close_report(open_report, "❌ abandoned")
+    assert "**Final status**: ❌ abandoned" in abandoned
+    assert "🔄 in progress" not in abandoned
     try:
         close_report("no status line here", "✅ passed")
         raised = False

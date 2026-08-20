@@ -54,6 +54,6 @@ test:   <command> → <N passed, M failed; paste key errors on failure>
 
 ## Relationship between reporting and report closing
 
-1. summary stage: deliver the final report per this contract + close the report from `🔄 in progress` to `✅ passed` / `❌ rejected`
+1. summary stage: deliver the final report per this contract + close the report from `🔄 in progress` to `✅ passed` / `❌ rejected` (an in-progress report abandoned at init is marked `❌ abandoned` instead)
 2. merge stage: record the merge method (PR / direct merge / keep iterating)
 3. If `metadata.skills_log` is non-empty → append the "Skill Usage Log" table to the report (Skill / Trigger stage / Trigger condition, deduplicated)

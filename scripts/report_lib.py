@@ -20,7 +20,7 @@ Rules encoded here:
 - Interruption recovery: resume from the first non-DONE stage; out-of-order gaps (a non-DONE
   marker before a later DONE) are surfaced as anomalies, never silently skipped.
 - Report closing: the header status line `**Final status**: 🔄 in progress` -> `✅ passed` /
-  `❌ rejected`, a metadata-line edit.
+  `❌ rejected` (or `❌ abandoned` when an in-progress report is abandoned at init), a metadata-line edit.
 - Inline mode (report.on_disk=false): no persistence, stage order preserved, closing status
   kept only in the final summary, explicit `⚠️ report not persisted (inline-only)` marker.
 - Archive rule: when reports under report.dir exceed 20, archive all but the 2 most recently
