@@ -77,6 +77,7 @@ Each stage writes at the corresponding `<!-- PHASE: xxx -->` marker — the mark
 | `merge` | 10 merge | merge method (PR / direct merge / keep iterating) |
 
 > **Findings-only tasks (📋 channel)**: the review stage's Findings are the deliverable; plan / isolation / implementation / quality-gate / verification / merge are written as "(📋 skipped)" `DONE` markers without expanded content. The reviewer may run quality gates as recheck evidence, but there is no dedicated quality-gate stage.
+> **Plan/design deliverables** follow the same skeleton: the exploration stage carries the plan document (written by the orchestrator; dispatching the explorer is optional recon) and the review stage returns a plan-validation verdict in place of code Findings; the same six stages stay "(📋 skipped)".
 
 ## Fix-loop table (when the quality-gate / review stage fails)
 

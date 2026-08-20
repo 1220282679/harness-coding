@@ -402,6 +402,113 @@ def test_claim_filename_avoids_concurrent_collision():
     assert retry == "harness-reports/harness-task-add-rerank-v3.md", "retry advances past the claimed name"
 
 
+def test_claim_filename_no_slug_and_slash():
+    # no-slug namespace names bare <prefix>-v<N>.md; a report_dir without a trailing slash is
+    # normalized (capability-contract runtime-config path constraint).
+    name = claim_filename(["harness-reports/harness-task-v0.md"], slug="")
+    assert name == "harness-reports/harness-task-v1.md", "no-slug namespace advances its own counter"
+    name2 = claim_filename([], slug="", report_dir="harness-reports")
+    assert name2 == "harness-reports/harness-task-v0.md", "missing trailing slash normalized"
+
+
+def test_embedded_marker_not_confused():
+    # Content that merely quotes a phase marker (a skeleton example in prose) must never be
+    # targeted by append_phase / resume_from — only standalone marker lines count.
+    text = (
+        "<!-- PHASE: init DONE -->\n"
+        "## Stage 5: implementation\n"
+        "the skeleton is: <!-- PHASE: review --> just prose\n"
+        "<!-- PHASE: implementation DONE -->\n"
+        "<!-- PHASE: review -->\n"
+        "<!-- PHASE: summary -->\n"
+    )
+    out = append_phase(text, "review", "## Stage 7: review\nfindings")
+    assert "the skeleton is: <!-- PHASE: review --> just prose" in out, "quoted marker must stay intact"
+    assert "## Stage 7: review" in out
+    marker = out.index("<!-- PHASE: review DONE -->")
+    assert out[:marker].rstrip().endswith("findings"), "content lands in the real review marker"
+    phase, anomalies = resume_from(out)
+    assert phase == "summary", "resume at the real next stage, got {!r}".format(phase)
+    assert anomalies == []
+
+
+def test_fenced_marker_not_confused():
+    # A marker on its own line inside a fenced code block (a doc quoting the skeleton) is content,
+    # not a real marker — even though the line shape matches a standalone marker.
+    text = (
+        "<!-- PHASE: init DONE -->\n"
+        "## Stage 5: implementation\n"
+        "```\n"
+        "<!-- PHASE: review -->\n"
+        "```\n"
+        "<!-- PHASE: implementation DONE -->\n"
+        "<!-- PHASE: review -->\n"
+        "<!-- PHASE: summary -->\n"
+    )
+    out = append_phase(text, "review", "## Stage 7: review\nfindings")
+    assert "```\n<!-- PHASE: review -->\n```" in out, "fenced marker must stay intact"
+    assert "## Stage 7: review" in out
+    marker = out.index("<!-- PHASE: review DONE -->")
+    assert out[:marker].rstrip().endswith("findings")
+    phase, anomalies = resume_from(out)
+    assert phase == "summary"
+    assert anomalies == []
+
+
+def test_truncate_agent_script_comments_not_headings():
+    # Shebangs / comment lines without heading whitespace are not markdown headings: truncation
+    # must not keep them as "heading structure" at the expense of the actual content.
+    lines = []
+    for i in range(600):
+        if i == 0:
+            lines.append("#!/usr/bin/env bash")
+        elif i % 3 == 0:
+            lines.append("#set -e")
+        else:
+            lines.append("actual output line {}".format(i))
+    out = truncate_agent("\n".join(lines))
+    assert "actual output line" in out, "real content must survive, not just # comments"
+
+
+def test_emit_inline_close_only_carries_marker():
+    # The close-only path (a single-stage inline summary) must still carry the explicit
+    # inline-only marker — an unpersisted report is never mistaken for a dropped one.
+    stages: list[tuple[str, str]] = []
+    emit_inline(stages, "summary", "## Final Report\n- pass", close="✅ passed")
+    assert len(stages) == 1
+    assert INLINE_MARKER in stages[0][1], "close-only inline output still carries the marker"
+    assert "**Final status**: ✅ passed" in stages[0][1]
+
+
+def test_truncate_boundaries_and_empty():
+    exactly100 = "\n".join("l{}".format(i) for i in range(100))
+    assert truncate(exactly100) == exactly100, "exactly 100 lines: no truncation"
+    exactly500 = "\n".join("l{}".format(i) for i in range(500))
+    assert truncate_agent(exactly500) == exactly500, "exactly 500 lines: no truncation"
+    assert truncate("") == ""
+    assert truncate_agent("") == ""
+
+
+def test_resume_from_empty_and_no_markers():
+    phase, anomalies = resume_from("")
+    assert phase == "<none>", "empty text has nothing to resume"
+    assert anomalies == []
+    phase, anomalies = resume_from("# just prose\nno markers here\n")
+    assert phase == "<none>", "no markers: nothing to resume"
+    assert anomalies == []
+
+
+def test_close_report_second_close_raises():
+    open_report = "# Harness Task Report\n\n> **Final status**: 🔄 in progress\n"
+    closed = close_report(open_report, "✅ passed")
+    try:
+        close_report(closed, "✅ passed")
+        raised = False
+    except ValueError:
+        raised = True
+    assert raised, "closing an already-closed report must raise (not idempotent by design)"
+
+
 def main() -> int:
     # Windows consoles default to GBK and garble non-ASCII; force stdout to UTF-8 (ignore if unavailable)
     try:
@@ -432,6 +539,14 @@ def main() -> int:
         ("archive rule (>20 keep 2, mtime-ranked)", test_archive_rule),
         ("archive ranks by recency not version", test_archive_ranks_by_recency_not_version),
         ("collision guard (concurrent same-task init)", test_claim_filename_avoids_concurrent_collision),
+        ("claim_filename no-slug + trailing-slash normalization", test_claim_filename_no_slug_and_slash),
+        ("content-quoted marker not confused", test_embedded_marker_not_confused),
+        ("fenced marker not confused", test_fenced_marker_not_confused),
+        ("agent-output non-heading # lines dropped", test_truncate_agent_script_comments_not_headings),
+        ("inline close-only path carries marker", test_emit_inline_close_only_carries_marker),
+        ("truncation boundaries + empty input", test_truncate_boundaries_and_empty),
+        ("resume_from empty / no-marker text", test_resume_from_empty_and_no_markers),
+        ("second close of a closed report raises", test_close_report_second_close_raises),
     ]
     failed = 0
     for name, fn in tests:

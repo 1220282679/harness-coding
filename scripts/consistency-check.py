@@ -202,6 +202,23 @@ def check_phases() -> list[str]:
     return []
 
 
+def check_workflow_phases() -> list[str]:
+    """workflow-check.py's hardcoded PHASES list must match the report-template skeleton phase set;
+    a phase added to the template but not to the lifecycle validator (or vice versa) would let the
+    per-channel lifecycle check drift silently."""
+    text = (REPO / "scripts/workflow-check.py").read_text(encoding="utf-8")
+    m = re.search(r"PHASES\s*=\s*\[(.*?)\]", text, re.S)
+    if not m:
+        return ["scripts/workflow-check.py: no PHASES list found"]
+    wf_phases = re.findall(r'"([\w-]+)"', m.group(1))
+    skeleton = phase_names()
+    if not skeleton:
+        return ["report template has no skeleton phase set"]
+    if set(wf_phases) != skeleton or len(wf_phases) != len(skeleton):
+        return [f"workflow-check PHASES {wf_phases} != report-template skeleton {sorted(skeleton)}"]
+    return []
+
+
 ADAPTER_MAPPING_HEADER_RE = re.compile(r"## 1\. Capability Mapping Table")
 
 
@@ -249,33 +266,44 @@ PROTOCOL_INVARIANTS = [
         "references/capability-contract.md",
         "references/templates/report-template.md",
         "README.md",
+        "references/adapters/_adapter-template.md",
         "references/adapters/claude-code.md",
         "references/adapters/codex.md",
         "references/adapters/opencode.md",
         "scripts/report_lib.py",
     ]),
+    # The numeric thresholds are anchored to report_lib.py too (its module docstring restates
+    # them), so a code change to 100/500/20 without the docs following fails the run.
     ("quality-gate truncation threshold", ">100 lines", [
         "SKILL.md",
         "references/capability-contract.md",
         "references/templates/write-report.md",
+        "scripts/report_lib.py",
     ]),
     # SKILL.md's reporting protocol is the high-level summary and carries only the quality-gate
     # truncation (>100); the agent-output truncation (>500) is a §8/write-report detail.
     ("agent-output truncation threshold", ">500 lines", [
         "references/capability-contract.md",
         "references/templates/write-report.md",
+        "scripts/report_lib.py",
     ]),
     ("archive threshold", "exceed 20", [
         "SKILL.md",
+        "references/capability-contract.md",
         "references/templates/report-template.md",
+        "scripts/report_lib.py",
     ]),
     ("DONE marker suffix", "DONE -->", [
         "references/capability-contract.md",
         "references/templates/write-report.md",
         "references/templates/report-template.md",
+        "references/adapters/claude-code.md",
+        "references/adapters/codex.md",
+        "references/adapters/opencode.md",
         "scripts/report_lib.py",
     ]),
     ("report status line", "**Final status**: 🔄 in progress", [
+        "references/capability-contract.md",
         "references/templates/report-template.md",
         "references/templates/write-report.md",
         "scripts/report_lib.py",
@@ -350,6 +378,7 @@ CHECKS = [
     ("role dispatch templates", check_roles, "fail"),
     ("adapter capability mappings", check_adapter_mappings, "fail"),
     ("report phase set", check_phases, "fail"),
+    ("workflow-check phase set vs template", check_workflow_phases, "fail"),
     ("reporting-protocol invariants", check_protocol_invariants, "fail"),
     ("harness config permissions for validators", check_harness_permissions, "fail"),
 ]

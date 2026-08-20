@@ -26,7 +26,7 @@ description: The filled-in adapter layer for the opencode harness. Maps the 8 re
 | `grep` | **tool.grep** | regex content search, ripgrep-style; returns matches with file:line |
 | `run_command` | **tool.bash** | The only channel for quality gates. Permission `bash` supports an allow/ask/deny mode plus a command glob-pattern map; `ask` → the user approves each command |
 | `ask_user` | **tool.question** | Asks the user a question mid-execution. Combined with the `ask` approval mode for commands/edits. When `question` is unavailable (e.g. non-interactive run) → degrade per §5 |
-| `write_report` | **tool.read** + **tool.edit** simulation | No dedicated report primitive → simulate per `references/templates/write-report.md` (locate marker → append → replace with DONE) |
+| `write_report` | **tool.read** + **tool.edit** simulation | No dedicated report primitive → simulate per `references/templates/write-report.md` (locate `<!-- PHASE: x -->` marker → append content → replace that one line with `... DONE -->`) |
 | `spawn_agent` | **tool.task** (optional) | Spawns a subagent defined in `.opencode/agents/` (or `~/.config/opencode/agents/`); agents are also invoked via `@<name>` mentions. Subagents can use only built-in tools (no MCP directly — see §8) |
 | `create_branch` | **tool.bash** `git checkout -b <name>` (optional) | no native worktree primitive; a worktree = `tool.bash` + `git worktree add` |
 | `check_command` | **tool.bash** `command -v <cmd>` (optional) | run once to decide |

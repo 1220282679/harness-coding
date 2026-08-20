@@ -89,7 +89,7 @@ def run_lifecycle(channel: str, exploration: bool) -> str:
 def assert_well_formed(text: str, channel: str) -> None:
     """A finished report: every marker DONE, no out-of-order gaps, closable status line."""
     for m in PHASE_RE.finditer(text):
-        assert m.group(0).endswith("DONE -->"), "{}: marker not closed: {}".format(channel, m.group(0))
+        assert m.group(2) is not None, "{}: marker not closed: {}".format(channel, m.group(0))
     phase, anomalies = resume_from(text)
     assert phase == "<none>", "{}: incomplete stage remains: {}".format(channel, phase)
     assert anomalies == [], "{}: out-of-order anomalies: {}".format(channel, anomalies)

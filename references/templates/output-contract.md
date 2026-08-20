@@ -39,7 +39,7 @@ description: The final-report output contract template for harness-coding. Repor
 | 🟢 Light | Simplified: change list + verification results (lint + format actually executed with pasted output; type/test on demand when the change touches type-relevant or logic/test-relevant code) |
 | 🟡 Standard | Full five sections: positioning / changes / verification / remaining / skill usage log (write "none" when none) |
 | 🔴 Full | Full five sections + review verdict + security review (if any) |
-| 📋 Findings-only | Full five sections: the Change List reads "none — findings-only"; the Verification section carries the review verdict + the graded Findings (with gate evidence only if the reviewer actually ran the gates) |
+| 📋 Findings-only | Full five sections: the Change List reads "none — findings-only" (plan/design deliverables: "none — plan-only"); the Verification section carries the review verdict + the graded Findings (for a plan deliverable: the plan-validation verdict in place of code Findings; gate evidence only if the reviewer actually ran the gates) |
 
 ## Quality-gate evidence format (embedded in the report)
 

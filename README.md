@@ -39,7 +39,7 @@
 |--------|----------|------|
 | Claude Code | [references/adapters/claude-code.md](references/adapters/claude-code.md) | Read / Write / Edit / Glob / Grep / Bash / AskUserQuestion / Agent / EnterWorktree |
 | OpenAI Codex CLI | [references/adapters/codex.md](references/adapters/codex.md) | read_file / apply_patch / shell / rg / glob_file_search / list_dir / spawn_agent |
-| opencode | [references/adapters/opencode.md](references/adapters/opencode.md) | tool.read / tool.write / tool.edit / tool.apply_patch / tool.bash / tool.grep / tool.glob / tool.question / tool.task |
+| opencode | [references/adapters/opencode.md](references/adapters/opencode.md) | tool.read / tool.write / tool.edit / tool.apply_patch / tool.bash / tool.grep / tool.glob / tool.list / tool.question / tool.task / tool.skill |
 | 新 Harness | [_adapter-template.md](references/adapters/_adapter-template.md) | 按模板逐节填写即可接入 |
 
 ## 核心思想
@@ -111,6 +111,8 @@ harness-coding/
 
 **分类记录（可审计）**：每次分类产出一行记录 `<判定> — verb: <动词>; noun: <名词>; deliverable: <yes/no>`。工作判定必须在定位阶段被记录在报告中，否则视为协议违规。
 
+**多轮会话处理**：每条用户消息后重跑分类；意图升级 → 触发报告初始化；同一任务链的后续变更**复用已打开的 in-progress 报告**（追加到对应阶段），不重新初始化；工作结束时关闭报告。
+
 **`ask_user` 降级**：当当前 Harness/上下文无法交互式提问时，自行选择最保守的选项并在报告中记录"⚠️ 无法询问用户；已按保守选项决定"，绝不假装用户已确认。
 
 ## 分级通道
@@ -124,7 +126,7 @@ harness-coding/
 | 🔴 **完整** | 跨文件重构 / 新功能 / 架构变更 / 涉及端口、事件或表结构 |
 | 📋 **仅结论** | 代码评审 / 只读评估，交付物是分级的 Findings 文档，或计划/设计交付物（不改代码） |
 
-**判定规则**：符合 🟢 类别列表（≤1 文件、无架构影响）→ 🟢；其他单文件或小型双文件变更 → 🟡；3 个及以上文件或涉及架构决策 → 🔴（例外：符合 🟢 类别且无架构影响的微改，无论文件数只升级到 🟡——跨多文件的 typo/import 修复不属于完整流程级变更）；交付物为 Findings 文档的评审/评估任务 → 📋，无代码变更的计划/设计交付物也归 📋（计划即为交付物，在探索阶段产出、评审阶段校验，评审角色保持"只报告、不修改"纪律）。
+**判定规则**：符合 🟢 类别列表（≤1 文件、无架构影响）→ 🟢；其他单文件或小型双文件变更 → 🟡；3 个及以上文件或涉及架构决策 → 🔴（例外：符合 🟢 类别且无架构影响的微改，无论文件数只升级到 🟡——跨多文件的 typo/import 修复不属于完整流程级变更）；交付物为 Findings 文档的评审/评估任务 → 📋，无代码变更的计划/设计交付物也归 📋（计划即为交付物：编排器将其写入探索阶段——派发探索角色做侦察可选——评审阶段校验，评审角色保持"只报告、不修改"纪律）。
 
 **升级条款**：单文件变更超过 50 行业务逻辑 → 自动升级为 🟡（即使形似 🟢 类别）；若同时涉及架构决策 → 升级为 🔴。
 
@@ -138,6 +140,8 @@ harness-coding/
 > **跳过阶段留痕**：被 🟢/🟡/📋 通道跳过的阶段，在报告中写作"(🟢/🟡/📋 skipped)"并标记 `DONE`，不展开内容。唯一例外是 🟢 下的**定位**：级别判定内联记录在定位阶段标记中，这是每个通道都会记录的一个阶段。
 >
 > **成本提示**：派发子代理 + 四道质量门禁有 token 与延迟成本。🟢/🟡 通道避免重复全量运行与重复派发；同轮可复用的质量门禁输出要复用；无理由不升级通道。
+>
+> **轻量任务取舍**：当变更点无法确定（如"修拼写错误"却找不到明确错误）→ 优先用 `ask_user` 确认目标；无人可问时选证据最强的候选（跨文件比对 / 非标准措辞 / 内部不一致），并如实记录候选筛选过程与理由；绝不假装已找到或跳过报告。
 
 ## 主流程（🔴 完整通道）
 
@@ -157,6 +161,8 @@ harness-coding/
 > 质量门禁失败循环：先定位根因再修复（禁止盲目尝试）→ 回到实现 → 重跑。不跳过任何步骤，不隐藏任何失败。
 >
 > **隔离降级**：worktree/分支创建失败（如 Windows+uv 下的 venv 损坏、无 git 权限）→ 降级为主仓库的功能分支，或直接在主线工作区修改；报告标注 `not isolated (<原因>)`（如 `not isolated (venv corruption)`），与契约的 `not isolated (no branch capability)` 形式一致；环境障碍不阻断流程。
+>
+> **架构决策确认**：涉及架构决策（**新端口 / 新事件 / 表结构 / 聚合行为变更**）→ 先将计划写入报告，用 `ask_user` 确认后再动代码；绝不跳过确认。
 
 ## 角色
 
@@ -187,9 +193,9 @@ lint   → format   → type check   → test
 > 一份逐阶段、完全可追溯的报告。与 `harness-reporting` 类似，但绑定的是能力契约而非具体工具。
 
 1. **命名**：`<report.prefix>-<slug>-v<N>.md`，默认 `harness-task-<slug>-v<N>.md`（无 slug 时 `harness-task-v<N>.md`）。`v<N>` 中的 `N` 必须是纯整数且**按任务解析**——glob 该任务自己的报告取最大值 +1（新任务为 0）
-2. **初始化**：glob 该任务历史报告 → 取最大版本 N；若该任务最高版本报告（v<N> 那份）仍是"🔄 in progress"，**先询问用户继续还是放弃**，绝不静默覆盖；放弃 → 将 in-progress 报告标记为 `❌ abandoned`（仅改头部状态行，阶段内容原样保留，不再重复触发询问）后新建 `v<N+1>`；新建文件**排他创建**，遇并发冲突重 glob 后以**下一个版本号**重试，绝不覆盖并发报告
+2. **初始化**：glob 该任务历史报告 → 取最大版本 N；若该任务最高版本报告（v<N> 那份）仍是"🔄 in progress"，**先询问用户继续还是放弃**（`ask_user` 不可用时**默认放弃**），绝不静默覆盖；放弃 → 将 in-progress 报告标记为 `❌ abandoned`（仅改头部状态行，阶段内容原样保留，不再重复触发询问）后新建 `v<N+1>`；新建文件**排他创建**，遇并发冲突重 glob 后以**下一个版本号**重试，绝不覆盖并发报告
 3. **增量追加**：每阶段完成后，用阶段内容 + 尾部 `DONE` 标记替换对应阶段标记
-4. **故障优先**：静默写失败不阻断主流程，但必须显式打印"⚠️ report not persisted — write anomaly"警告
+4. **故障优先**：静默写失败不阻断主流程，但必须显式打印"⚠️ report not persisted — write anomaly"警告；质量门禁输出 >100 行保首 30 + 尾 30；阶段已有内容则追加 `### Append/Retry` 子节、绝不覆盖；连续 3 次写失败在总结阶段追加同一警告
 5. **恢复**：会话中断后从第一个非 `DONE` 标记（最早未完成阶段）继续；乱序缺口记录为恢复异常，绝不静默跳过
 6. **关闭**：总结阶段将"🔄 in progress"改为"✅ passed / ❌ rejected"（init 阶段放弃的 in-progress 报告改为标记 `❌ abandoned`，见第 2 步）；合并阶段记录合并方式
 7. **模板**：[references/templates/report-template.md](references/templates/report-template.md)
@@ -302,9 +308,9 @@ lint   → format   → type check   → test
 
 | 脚本 | 作用 | 运行方式 |
 |------|------|----------|
-| [scripts/smoke-report.py](scripts/smoke-report.py) | 报告协议冒烟验证：版本解析 / 标记追加与 DONE 替换 / 相邻标记不复制 / 截断 / 恢复 / 关闭 / 写保护 / 目录创建 / 内联模式 / 归档 / 并发冲突防护 | `python scripts/smoke-report.py` |
+| [scripts/smoke-report.py](scripts/smoke-report.py) | 报告协议冒烟验证：版本解析 / 标记追加与 DONE 替换 / 相邻标记不复制 / 引用标记防御（正文/围栏内引用 marker 不误定位）/ 截断 / 恢复 / 关闭 / 写保护 / 目录创建 / 内联模式 / 归档 / 并发冲突防护 | `python scripts/smoke-report.py` |
 | [scripts/workflow-check.py](scripts/workflow-check.py) | 分级通道端到端生命周期验证：🟢/🟡/🔴/📋 各通道报告形态 + 与 SKILL.md "Skips:" 声明的交叉校验 | `python scripts/workflow-check.py` |
-| [scripts/consistency-check.py](scripts/consistency-check.py) | 跨文档一致性验证：frontmatter / 内部引用 / 能力用法 / 角色模板 / 阶段集 / 适配器映射 / 报告协议不变量 | `python scripts/consistency-check.py` |
+| [scripts/consistency-check.py](scripts/consistency-check.py) | 跨文档一致性验证：frontmatter / 内部引用 / 能力用法 / 能力拼写 / 角色模板 / 阶段集 / 适配器映射 / 报告协议不变量 / harness 权限配置 | `python scripts/consistency-check.py` |
 | [scripts/report_lib.py](scripts/report_lib.py) | 报告协议机械规则的**单一实现源**，被 smoke 与 workflow 两个脚本共同引用，防止文档与验证器漂移 | 库模块，被 smoke-report 与 workflow-check 导入 |
 
 > 任何 PASS 打印后退出码为 0；任何 FAIL 退出码为 1。Windows 控制台在 GBK 下会乱码，可先设置 `PYTHONIOENCODING=utf-8`（脚本自身已尝试强制 UTF-8）。

@@ -44,7 +44,13 @@ REPORT_DIR = "harness-reports/"
 # tolerance): inline-only or failed persistence must never look like a silently dropped report.
 INLINE_MARKER = "⚠️ report not persisted (inline-only)"
 # Truncation thresholds and the phase-marker format (must stay in sync with the docs).
-PHASE_RE = re.compile(r"<!-- PHASE: (\S+?)(?: DONE)? -->")
+# A marker is anchored to a standalone line (allowing surrounding whitespace) and the DONE flag
+# is captured separately, so content that merely quotes a marker (a skeleton example, a code
+# sample) is never mistaken for a real marker.
+PHASE_RE = re.compile(r"^[ \t]*<!-- PHASE: (\S+?)( DONE)? -->[ \t]*$", re.MULTILINE)
+# A markdown heading: 1-6 '#' at line start (up to 3 leading spaces) followed by whitespace or
+# end-of-line. Excludes shebangs and '#'-prefixed comments that are not headings.
+HEADING_RE = re.compile(r"^[ \t]{0,3}#{1,6}(?=\s|$)")
 
 # Decompose <prefix>[-<slug>]-v<N>: the optional slug group backtracks to leave the trailing
 # -v<N>, so the trailing version always wins and a no-slug report (harness-task-v10.md) parses
@@ -107,12 +113,34 @@ def claim_filename(
     if that create fails because the path now exists, re-run this against the fresh glob
     (bumping N) and retry. Versioning stays per-task."""
     exists = exists_fn or (lambda p: False)
+    # report.dir must end with a trailing slash (capability-contract runtime config); normalize a
+    # missing one so an override like "harness-reports" can never silently produce a bad filename.
+    report_dir = report_dir if report_dir.endswith("/") else report_dir + "/"
     n = next_version(files, slug)
     while True:
         name = "{}{}-{}-v{}.md".format(report_dir, PREFIX, slug, n) if slug else "{}{}-v{}.md".format(report_dir, PREFIX, n)
         if not exists(name):
             return name
         n += 1  # a concurrent session claimed this name: advance and retry
+
+
+def _marker_lines(lines: list[str]):
+    """Yield (index, match) for each standalone phase-marker line, skipping fenced code blocks.
+
+    Fenced blocks (``` / ~~~) are where a doc quotes a skeleton example; a marker on its own
+    line inside a fence is content, not a real marker. The whole-line-anchored PHASE_RE already
+    excludes markers embedded mid-line in prose."""
+    in_fence = False
+    for i, line in enumerate(lines):
+        stripped = line.lstrip()
+        if stripped.startswith("```") or stripped.startswith("~~~"):
+            in_fence = not in_fence
+            continue
+        if in_fence:
+            continue
+        m = PHASE_RE.search(line)
+        if m:
+            yield i, m
 
 
 def append_phase(text: str, phase: str, content: str) -> str:
@@ -123,19 +151,18 @@ def append_phase(text: str, phase: str, content: str) -> str:
     Replaces only the target marker line, doesn't copy adjacent markers (contract §8 composition-simulation semantics).
     """
     lines = text.splitlines()
-    for i, line in enumerate(lines):
-        m = PHASE_RE.search(line)
-        if m and m.group(1) == phase:
-            # DONE state comes from the regex match group, not `line.endswith`: a hand-edited
-            # report may carry trailing whitespace after a DONE marker, which would otherwise be
-            # misread as non-DONE and re-expand an already-completed block.
-            if not m.group(0).endswith("DONE -->"):
-                block = content.rstrip("\n") + "\n" + line.replace(" -->", " DONE -->")
+    for i, m in _marker_lines(lines):
+        if m.group(1) == phase:
+            # DONE state comes from the captured group, not `line.endswith`: a hand-edited report
+            # may carry trailing whitespace after a DONE marker, which would otherwise be misread
+            # as non-DONE and re-expand an already-completed block.
+            if m.group(2) is None:
+                block = content.rstrip("\n") + "\n" + lines[i].replace(" -->", " DONE -->")
                 lines[i] = block
             else:
                 # already DONE: don't overwrite. The retry sub-section sits ABOVE the marker line
                 # like regular stage content, so the DONE marker keeps ending the block.
-                lines[i] = "### Append/Retry\n" + content.rstrip("\n") + "\n" + line
+                lines[i] = "### Append/Retry\n" + content.rstrip("\n") + "\n" + lines[i]
             return "\n".join(lines)
     # No matching marker: append to the end
     return text.rstrip("\n") + "\n\n" + content.rstrip("\n") + "\n"
@@ -157,7 +184,9 @@ def truncate_agent(text: str, limit: int = 500, head: int = 30, tail: int = 30) 
     lines = text.rstrip("\n").splitlines()
     if len(lines) <= limit:
         return "\n".join(lines)
-    headings = [ln for ln in lines if ln.startswith("#")]
+    # Only markdown-heading-shaped lines count as headings: a shebang or a '#'-prefixed comment
+    # (e.g. shell/Python output) is not a heading and must not be kept at the expense of content.
+    headings = [ln for ln in lines if HEADING_RE.search(ln)]
     if headings:
         marker = "\n... truncated, {} lines total (headings only kept) ...\n".format(len(lines))
         if len(headings) > limit:
@@ -181,14 +210,11 @@ def resume_from(text: str) -> tuple[str, list[str]]:
     lines = text.splitlines()
     todo: list[tuple[int, str]] = []  # (line index, phase)
     done_idx: list[int] = []
-    for i, line in enumerate(lines):
-        m = PHASE_RE.search(line)
-        if not m:
-            continue
-        # DONE state comes from the regex match group, not `line.endswith`: a hand-edited
-        # report may carry trailing whitespace after a DONE marker, which would otherwise be
-        # misread as non-DONE and resume at an already-completed stage. Mirrors append_phase.
-        if m.group(0).endswith("DONE -->"):
+    for i, m in _marker_lines(lines):
+        # DONE state comes from the captured group (not `line.endswith`): a hand-edited report
+        # may carry trailing whitespace after a DONE marker, which would otherwise be misread as
+        # non-DONE and resume at an already-completed stage. Mirrors append_phase.
+        if m.group(2) is not None:
             done_idx.append(i)
         else:
             todo.append((i, m.group(1)))
@@ -230,7 +256,12 @@ def emit_inline(
         payload = "{}\n\n{}".format(INLINE_MARKER, content) if not stages else content
         stages.append((phase, payload))
     else:
-        stages.append((phase, "{}\n**Final status**: {}".format(content, close)))
+        payload = "{}\n**Final status**: {}".format(content, close)
+        if not stages:
+            # close-only path (e.g. a single-stage inline summary): still carry the explicit
+            # inline-only marker so an unpersisted report is never mistaken for a dropped one.
+            payload = "{}\n\n{}".format(INLINE_MARKER, payload)
+        stages.append((phase, payload))
 
 
 def archive_candidates(
