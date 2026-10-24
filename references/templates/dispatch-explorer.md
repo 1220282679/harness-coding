@@ -16,6 +16,10 @@ description: The dispatch prompt template for the harness-coding explorer (recon
 ```text
 Recon target: <one sentence on what to investigate, e.g. "how the knowledge-service recall flow wires up Milvus with rerank">
 
+## Context (mandatory first step)
+read `specs/<slug>/spec.md` before any recon. You only need the requirement/non-goals sections — the Background section is empty by design (you will populate it). If `spec.md` is missing → report "missing spec, cannot proceed" back, do NOT invent the requirement.
+Note: at explorer dispatch time the spec is a skeleton (Background still empty) — this is expected, not an error.
+
 ## Rules (recon discipline)
 1. Read-only: no creating/modifying/deleting any file, no running tests or quality gates
 2. Every conclusion must have file:line; no vague "somewhere in a file" answers

@@ -5,6 +5,22 @@ description: Release history for the harness-coding skill. Tracks the initial re
 
 # Changelog
 
+## v2.0.1 — 2026-10-24
+
+Dispatch-protocol hardening: close a real gap where a sub-agent could start work without reading the artifacts, missing already-confirmed assumptions/ACs/non-goals. Non-breaking patch over v2.0.0.
+
+### Added
+
+- **Mandatory Context step** at the head of all three dispatch templates (`dispatch-explorer.md` / `dispatch-implementer.md` / `dispatch-reviewer.md`): the sub-agent must `read` the relevant artifacts before any work, with role-differentiated targets:
+  - explorer: `read specs/<slug>/spec.md` (Background still empty is expected, not an error)
+  - implementer: `read` all three artifacts + same-layer same-shape files; task id must be present in `tasks.md` else refuse
+  - reviewer: `read` all three artifacts + cross-check diff against the AC ids claimed; 📋 plan-validation reads the plan document directly
+- SKILL.md §3 strengthened: explicit statement that context flows through artifacts, never through parent-session summaries — the `spawn_agent(role, prompt)` prompt carries only a task pointer + role discipline
+
+### Why not summaries
+
+Summaries are lossy (the model decides "what's key"), unverifiable (no machine check for completeness), and break context isolation by leaking parent-session content into the sub-agent's window. Artifacts are the single source of truth: structured, id-addressable (AC/T/R/D), and continuously fresh across continuation turns.
+
 ## v2.0.0 — 2026-10-24
 
 Artifact-driven rewrite (SDD), per `SDD-REFACTOR-DESIGN.md` (frozen). Breaking change: the v1 reporting protocol and its reports are not migrated.

@@ -20,6 +20,10 @@ description: The dispatch prompt template for the harness-coding reviewer role. 
 ```text
 Review scope: <diff / file list / service, e.g. "all changes in git diff master...HEAD">
 
+## Context (mandatory first step)
+read `specs/<slug>/spec.md`, `plan.md`, and `tasks.md` before any review — the artifacts are the source of truth for what the change was supposed to do (AC ids), what was deferred (## Deferred), and prior review rounds (## Review). Cross-check the diff against the AC ids the implementer claimed to satisfy. If artifacts are missing → report "cannot review without artifacts", do NOT proceed.
+For 📋 plan-validation tasks where the plan IS the deliverable: read the plan document under review directly (no specs/ dir exists yet).
+
 ## Review baseline
 - Layering direction: domain zero framework / infra only implements ports & repositories / main.py only wires
 - Errors & config: unified error codes + centralized config (pydantic-settings), no scattered os.environ

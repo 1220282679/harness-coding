@@ -37,6 +37,8 @@ Record one line per verdict: `<verdict> — verb: <…>; noun: <…>; deliverabl
 
 explorer: read-only recon → orchestrator appends results to `spec.md` Background. implementer: lands code + tests, checks off its tasks in `tasks.md` with pasted gate output. reviewer: graded findings (blocker/major/minor) → `## Review` section. **Closing rule: an open blocker/major makes closing illegal** (artifact-check enforces).
 
+Each role's dispatch begins with a mandatory **Context step**: read the relevant artifacts (`spec.md` / `plan.md` / `tasks.md`) before any work. **Context flows through artifacts, never through parent-session summaries** — the `spawn_agent(role, prompt)` prompt carries only a task pointer + role discipline; the sub-agent `read`s the artifacts itself to get the full picture.
+
 ## 4. Quality Gates (`run_command`)
 
 lint → format → type → test, fixed order, project-defined commands (adapter §2). Evidence pasted, never from memory; failure → root cause → fix → re-run; never delete assertions or relax checks to go green. 🟢: lint + format mandatory; type/test on demand with reason recorded.
