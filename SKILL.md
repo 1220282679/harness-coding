@@ -1,174 +1,61 @@
 ---
 name: harness-coding
-version: 1.0.0
+version: 2.0.0
 license: MIT
-description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), dispatch roles (explorer / implementer / reviewer), enforce quality gates, and deliver a traceable five-section report. Harness-agnostic — depends only on a capability contract and runs through any execution harness's adapter layer. Trigger proactively even if the word "harness" is not mentioned; if uncertain, ask before deciding.
+description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
 ---
 
-# Role: Universal Harness Coding Orchestrator (harness-coding)
+# harness-coding — Artifact-Driven Coding Orchestrator (v2)
 
-The master control flow that turns a one-line requirement into a deliverable change. It does not write large implementations itself; it dispatches per-stage to roles and enforces architecture-decision confirmation points and quality gates. Works on any harness that implements this skill's capability contract.
+Methodology decoupled from the harness: this body uses only capability names (required: `read` / `write` / `edit` / `glob` / `grep` / `run_command` / `ask_user`; optional: `spawn_agent` / `create_branch` / `check_command` / `find_skill` / `web_search` — each with a degradation rule). On load: read `references/capability-contract.md` (L2) and the current harness's adapter in `references/adapters/` (generate from `_adapter-template.md` if missing).
 
-> **Core idea**: the methodology is decoupled from the execution environment. The body uses only "capability" wording (read files / run commands / dispatch / ask / write reports); the concrete tools are decided by the adapter layer. Before loading this skill, identify the current harness's adapter layer.
-
-## Prerequisites
-
-1. The current harness satisfies the **required capabilities** of the capability contract (see `references/capability-contract.md`)
-2. Load the current harness's adapter layer from `references/adapters/` (if missing, generate it from `_adapter-template.md`) and confirm the concrete tool for each capability — **re-verify version-sensitive adapter claims** (tool names / config keys / feature flags / version notes) against the current session's live tool catalogue, since adapter tool surfaces evolve between releases
-3. Confirm the project's quality-gate commands (lint / format / type / test, executed via the `run_command` capability)
-4. Confirm the role agent types (explorer / implementer / reviewer) are registered in the harness; if not, degrade to generic subagents or inline execution in the orchestrator (see "Role Mapping" in the adapter; responsibilities and output contracts stay unchanged)
-
-## Session Classification (mandatory first action)
-
-> Must run before the first response of any session. Not skippable.
+## 1. Session Classification (mandatory first action, every channel)
 
 | Condition | Verdict | Follow-up |
 |-----------|---------|-----------|
-| Change code / fix bug / add feature / refactor / write tests / schema change / code review (produces Findings) / read-only evaluation that produces a formal Findings deliverable (even with no file changes) / any on-disk action | **Work task** | → initialize the report, go through the tiered channels below |
-| Q&A / explanation / consultation / small talk / informal read-only look (no formal review deliverable, no file changes) | **Non-work task** | → interact normally, skip harness |
-| Cannot tell whether code will change | **Unclear intent** | → **ask first, never guess** |
+| Change code / fix bug / add feature / refactor / write tests / schema change / review producing Findings / any on-disk action | work task | → pick channel below |
+| Q&A / consultation / informal read-only look, no formal deliverable | non-work task | → interact normally, skip |
+| Cannot tell whether code will change | unclear | → ask first ("do we do it?"), never guess |
 
-> `ask_user` degradation: when the current harness/context **cannot ask the user interactively** (no interactive question primitive, unattended), pick the most conservative option yourself and record it in the report as "⚠️ unable to ask the user; decided on the conservative option"; never pretend the user confirmed. **"Conservative" means the option with the fewest irreversible side effects** — no schema/port/event/table changes, no merge, no overwriting existing work; when the safe choice is "do nothing / defer", take it and record it.
+Record one line per verdict: `<verdict> — verb: <…>; noun: <…>; deliverable: <yes/no>` (🟢 records it in the closing reply). Headless (no `ask_user`) → most conservative option + record; never pretend confirmed.
 
-**Quick heuristic**: look at the verb first, then the noun. "Add/refactor/fix/change/replace/implement" → work task; "design/plan/evaluate" followed by a repo feature/module → work task **when the result is a formal deliverable (plan / Findings / implementation)**; only a purely consultative read-only look with no formal deliverable counts as non-work. When in doubt → ask.
+## 2. Channel × Artifact Matrix (single source of flow truth)
 
-**Classification record (auditable)**: every classification yields a one-line record `<verdict> — verb: <verb>; noun: <noun>; deliverable: <yes/no>` (e.g. `work task — verb: fix; noun: auth bug in login.py; deliverable: yes`). Work verdicts are recorded at the positioning phase (inline for 🟢); a work task whose verdict is not recorded in the report is a protocol violation. Classification is instruction-following, so the verb/noun evidence is the only way a later reader can verify why a task was (or wasn't) started. In inline-only mode the classification line is the first item of the emitted output (see the on-disk switch).
+| Channel | Artifacts | Flow | Close-out |
+|---------|-----------|------|-----------|
+| 🟢 light | **zero files** | implement → lint/format | inline summary |
+| 🟡 standard | `intent.md` | locate → clarify → implement → gates → review → full re-verify | reply (merge ask_user) |
+| 🔴 full | `specs/<slug>/{spec,plan,tasks}.md` | info-gathering → draft spec → clarify gate → plan → per-task implement+gates → review → full re-verify | reply (merge ask_user) + on-demand view |
+| 📋 findings-only | spec/plan **IS the deliverable** | locate → review/validate | validation verdict |
 
-**Multi-turn handling**: re-run the classification after every user message; follow-up changes in the same task chain **reuse the already-open in-progress report** (append to the corresponding stage), do not re-init; when work ends → close the report. **Intent upgrade across channels**: if a follow-up message raises the task's channel (e.g. 🟢 → 🟡/🔴 — a same-chain typo fix grows into a refactor), the lower-channel report cannot host the upgraded flow: its skipped stages are already `(<channel> skipped)` `DONE` and the no-overwrite rule forbids re-opening them — so **close the lower-channel report as `❌ abandoned` (reason "channel upgraded to <new tier>") and initialize a fresh `v<N+1>` at the new channel**; the two reports stay linked by the task slug. A same-channel follow-up reuses the open report; a follow-up that *lowers* the channel keeps the current one (never downgrade mid-task).
+- Hard constraints: 🟢 zero new files; 🔴 three artifacts; **AC only added, never rewritten** (supersede to re-point, §12 of the design doc)
+- Clarification gate (🟡/🔴, scope fuzzy): split unclear points into **Assumptions** (low-risk, self-decided, recorded as A-ids) vs **Questions** (batch via `ask_user`, one round — never serial across turns); answers become AC/AD entries. Info-gathering first: `find_skill` (local skills) / `web_search` (external facts; cite source + time; AC stays locally executable)
+- Close-out re-verification (🟡/🔴): full gates re-run before closing — per-task green ≠ repo green; failure → back to the task loop. Merge decision (PR / merge / iterate) via `ask_user` at close-out
+- Continuation: slug comes from the first requirement; follow-ups append tasks by default (🟡: append intent paragraphs); channel upgrade backfills missing artifacts, never downgrades; explicit "new task" or unrelated topic → new slug; existing dir outside this chain → reject and rename
 
-## Reporting Protocol (`write_report` capability)
+## 3. Roles & Dispatch (`spawn_agent` optional → inline; templates in `references/templates/dispatch-*.md`)
 
-> A stage-by-stage, fully traceable report, bound to the capability contract rather than to specific tools.
+explorer: read-only recon → orchestrator appends results to `spec.md` Background. implementer: lands code + tests, checks off its tasks in `tasks.md` with pasted gate output. reviewer: graded findings (blocker/major/minor) → `## Review` section. **Closing rule: an open blocker/major makes closing illegal** (artifact-check enforces).
 
-1. **Naming**: `<report.prefix>-<slug>-v<N>.md`, default `harness-task-<slug>-v<N>.md` (no-slug fallback `harness-task-v<N>.md`); `N` in `v<N>` must be a **pure integer** (no leading zeros) and is resolved **per task** — `glob` this task's own reports and take max + 1 (0 for a fresh task), so different tasks have independent counters and `v<N>` means "the N-th report for this task", not a global serial; the optional `<slug>` is a short kebab-case task identifier (lowercase letters / digits / hyphens, sanitized; empty → omitted). Mixed suffixes like `v-test1` are forbidden—max-version resolution depends on integer increments (glob pattern and directory come from the capability-contract runtime config, default `harness-reports/harness-task-<slug>-*`, resolved against the harness working directory / project root — never the skill's own directory); mixed names break max resolution. If the caller explicitly specifies a report filename (e.g. drills/test scenarios), write to that name and **skip the "in-progress question"** (treated as pre-decided by the user), recording a "report name specified by caller" deviation at the top of the report
-2. **Initialize**: `glob` this task's historical reports (`<report.dir>/<report.prefix>-<slug>-*`, no-slug: `<report.dir>/<report.prefix>-v*`) → take the max version N (N=0 if none); if the highest-version report **for this task** (the `v<N>` one) has `final status="🔄 in progress"` → **ask the user whether to continue or abandon first**, never silently overwrite; **when `ask_user` is unavailable, default to abandon** (continuing into a possibly-stale session is the riskier guess); **continue → resume the existing `v<N>` report (recovery per step 5); abandon → mark the in-progress report `❌ abandoned`** (a header-status-line edit; stage content left untouched, so it no longer re-triggers this prompt) **and create `v<N+1>.md`** with the skeleton (title / metadata / phase markers, `init` phase marked complete). Create the new file **exclusively** (create-fail-if-exists); on collision (a concurrent session claimed the same name) re-glob and retry with the **next resolved version** — never silently overwrite a concurrently-created report
-3. **Incremental append**: after each stage completes, replace the corresponding phase marker with the stage content + a trailing `DONE` marker (content sits above the marker line, which ends the block); if the marker doesn't exist, append to the end
-4. **Fault tolerance first**: silent write failure, not blocking the main flow; but must explicitly print a `⚠️ report not persisted — write anomaly` warning in the reply. Quality-gate output >100 lines → keep first 30 + last 30; if the stage already has content append a `### Append/Retry` sub-section, don't overwrite; 3 consecutive write failures → append the same `⚠️ report not persisted — write anomaly` warning at the summary stage
-5. **Recovery**: after a session interruption, resume from the first non-DONE marker (the earliest incomplete stage); a non-DONE marker before a later `DONE` is an out-of-order gap and is recorded as a recovery anomaly, never silently skipped
-6. **Close**: at the summary stage turn `🔄 in progress` → `✅ passed` / `❌ rejected` (an in-progress report abandoned at init is marked `❌ abandoned` instead — see step 2; a mid-task user abort is marked `❌ rejected` with a "user aborted" note; a channel-upgraded lower-channel report is marked `❌ abandoned` — see multi-turn handling). Closing only flips the header status line — the file stays writable for the merge stage that follows.
-7. **Template**: see `references/templates/report-template.md`
+## 4. Quality Gates (`run_command`)
 
-> The report is for traceability only; it does not affect task execution. Archive: when reports exceed 20, remind to move them into `<report.dir>archive/` (default `harness-reports/archive/`, derived per the report template, keeping the 2 most recently modified).
->
-> **On-disk switch**: with capability-contract config `report.on_disk=false`, the report is inline-only, not written to disk—suited for the 🟢 light channel or temporary sessions; `write_report` degrades to no persistence and instead emits the stage content inline in the reply in stage order (versioning/recovery no longer apply; the closing status is kept in the final summary), the reporting protocol stays unchanged. Inline-only output must carry an explicit `⚠️ report not persisted (inline-only)` marker in the reply so a missing file is never mistaken for a silently dropped report. In inline-only mode there is **no on-disk skeleton**: the inline output is the channel's report depth rendered in stage order — 🟢 emits the simplified summary (**classification line** + change list + verification results, **no skipped-stage markers**); 🟡/🔴/📋 emit executed stages **plus** the `(<channel> skipped)` `DONE` markers for skipped stages, so full-depth traceability is preserved in the reply. **Who flips `report.on_disk`**: the orchestrator decides per channel — 🟢 defaults to inline mode (cost-saving) unless configured otherwise; other channels default to on-disk; the adapter layer may override via the runtime config.
+lint → format → type → test, fixed order, project-defined commands (adapter §2). Evidence pasted, never from memory; failure → root cause → fix → re-run; never delete assertions or relax checks to go green. 🟢: lint + format mandatory; type/test on demand with reason recorded.
 
-## Tiered Channels
+## 5. Artifacts & Validation
 
-> **Classify first, then dispatch**—pick the channel by change size to avoid heavy flows for small changes.
+Templates: `references/templates/{spec,plan,tasks,intent}.md`. Checked tasks must carry `输出:` (pasted evidence). `## Deferred` = remaining risks as open checkboxes. Validate before closing: `python scripts/artifact-check.py specs/` (schema + AC↔T closure + review guard).
 
-| Tier | Applies to |
-|------|-----------|
-| 🟢 **Light** | typo / import fix / single-line config / formatting / docstring tweak |
-| 🟡 **Standard** | substantive single-file / single-function change or small 2-file change, no new port / event / table schema |
-| 🔴 **Full** | cross-file refactor / new feature / architecture change / involves port, event, or table schema |
-| 📋 **Findings-only** | code review / read-only evaluation whose deliverable is a graded Findings document, or a plan/design deliverable (no code changes) |
+## 6. Close-out
 
-**Verdict rule**: a change matching the 🟢 category list (typo / import fix / single-line config / formatting / docstring tweak), ≤1 file, no architecture impact → 🟢; any other single-file or small 2-file change → 🟡; a change of 3+ files or an architecture decision → 🔴 (exception: a change matching a 🟢 category item with no architecture impact escalates only to 🟡 regardless of file count — a multi-file typo/import fix is not a full-flow change); a review / evaluation task whose deliverable is a Findings document (not code changes) → 📋, and so does a plan/design deliverable with no code changes (the plan is the deliverable: the orchestrator writes it into the exploration stage — dispatching the explorer for recon is optional — and the review stage validates it, keeping the reviewer's "reports only, does not fix" discipline). Confirm the tier at session classification and record it at the positioning stage (🟢 has no standalone positioning step — the tier is recorded inline in the positioning phase marker).
+The closing reply is derived from artifacts + diff — never from memory: requirement positioning / verification evidence / remaining risks (open Deferred). On-demand view: `python scripts/derive-report.py specs/<slug> [--base <ref>]` (stdout, never persisted; **no report file is ever written**).
 
-**Escalation clause**: a single-file change exceeding 50 lines of business logic → auto-escalate to 🟡 (never 🟢, even if it resembles a 🟢 category item); if it also involves an architecture decision → escalate to 🔴.
+## 7. Conditional Skills
 
-### Steps per channel
-
-- 🟢 **Light**: 3 steps (implement → quality gate → report). Skips: exploration, plan, isolation, review, verification, merge (positioning has no standalone step on 🟢 — the tier is recorded inline in the positioning phase marker); **the orchestrator must still self-check** — lint + format are mandatory and actually executed with pasted output; type + test run only when the change touches type-relevant or logic/test-relevant code, with the reason recorded (an import fix that changes types runs type; a logic change runs test); no new un-commented type:ignore/noqa, no cross-layer dependency leak
-- 🟡 **Standard**: 6 steps (positioning+exploration → implement → quality gate → review → report → merge). Skips: plan, isolation, verification.
-- 🔴 **Full**: 10 steps (see the main workflow table).
-- 📋 **Findings-only**: 3 steps (positioning → review → summary). Skips: plan, isolation, implementation, quality-gate, verification, merge — written as "(📋 skipped)" `DONE` markers (exploration is optional: dispatch the explorer first when the review scope itself is unclear). The review step dispatches the reviewer role **directly on the review target**; the graded Findings ARE the deliverable and go into the report (the reviewer may run quality gates as recheck evidence, not required). For a **plan/design deliverable** (📋), the exploration stage holds the plan document — written by the orchestrator even when no explorer is dispatched — and the review stage returns a plan-validation verdict instead of code Findings. Architecture decisions surfaced by the review are recorded in the report and deferred to a follow-up change task — never changed silently.
-
-> **Skipped stages go on record**: stages skipped by the 🟢/🟡/📋 channels are written in the report as `(<channel> skipped)` — e.g. `(🟡 skipped)` — and marked `DONE`, without expanded content; the skeleton keeps the full phase set and every stage the channel does not execute gets the skipped marker. The one exception is **positioning under 🟢**: the tier verdict is recorded inline in the positioning phase marker (tier + one-line rationale, marked `DONE`) rather than as `(🟢 skipped)` — it is the one phase every channel records.
-
-> **Two artifacts**: the on-disk report always keeps the full phase skeleton with skipped stages written as `(<channel> skipped)` markers (traceability artifact); the final summary delivered to the user is trimmed per channel depth (🟢 simplified / 🟡 full five sections / 🔴 full five sections + review verdict + security review / 📋 full five sections with the change list reading "none — findings-only", see the Output Contract). They coexist: the on-disk report guarantees traceability, the delivered summary guarantees conciseness.
-
-> **Light-task trade-offs**: when the change point cannot be settled (e.g. "fix the typo" but no clear error found)—prefer `ask_user` to confirm the target; if nobody can be asked, pick the candidate with the **strongest evidence** (cross-file comparison / non-standard phrase / internal inconsistency), and honestly record the candidate-sifting process and rationale in the report; never pretend to have found it or skip reporting.
-
-> Architecture decisions involved (new port / new event / table schema / aggregate-behavior change) → write the plan to the report first, use `ask_user` to get confirmation before touching code; never skip the confirmation.
-
-> **Cost note**: dispatching sub-agents + four quality gates carry token and latency costs. On 🟢/🟡 channels avoid repeated full runs and repeated dispatch; reuse quality-gate output where the same round can; don't escalate the channel without reason.
-
-## Main Workflow (🔴 Full channel, 10 steps)
-
-| Step | Action | Dispatch / condition |
-|------|--------|----------------------|
-| 1 positioning | Parse the requirement, decide the tier, confirm ownership and architecture decisions | — |
-| 2 exploration | Dispatch the explorer role to locate change points + reusable patterns | Explorer role |
-| 3 plan | When architecture decisions are involved, write the plan to the report, confirm with `ask_user` | — |
-| 4 isolation | Code changes involved → branch / worktree / directory snapshot | Isolation capability |
-| 5 implementation | Dispatch the implementer role; add tests for core logic if missing | Implementer role |
-| 6 quality gate | lint + format + type + test. Failure → debug → back to step 5 | Quality gate |
-| 7 review | Dispatch the reviewer role; blocker/major rejected → loop back 5→6→7; security review if involved | Reviewer role |
-| 8 verification | Re-run quality gates for fresh evidence; never claim "passed" from memory | Verification |
-| 9 summary | Deliver the final report per the output contract, close the report | — |
-| 10 merge | Ask the user: PR / merge / keep iterating | — |
-
-> Quality-gate failure loop: locate the root cause before fixing (no blind attempts) → back to implementation → re-run. Within the chosen channel, no skipping steps and no hiding failures (the 🟢/🟡/📋 step trims are channel design, not skipped steps).
-
-> **Isolation degradation**: if worktree/branch creation fails (e.g. corrupted venv under Windows+uv, no git permission) → degrade to a feature branch on the main repo, or work directly on the main workspace; mark the report `not isolated (<reason>)` (e.g. `not isolated (venv corruption)`), matching the contract's `not isolated (no branch capability)` form; environment blockers don't stop the flow.
-
-## Roles (`spawn_agent` capability, degradable to inline)
-
-| Role | Responsibility | When to dispatch |
-|------|----------------|------------------|
-| Explorer | Read-only recon: locate implementations / call chains / reusable patterns, output with file:line | Location unclear / before cross-file changes |
-| Implementer | Land the implementation + add tests + pass quality gates, four-part report | After location is clear |
-| Reviewer | Compliance / correctness / quality-gate recheck, output graded findings | After implementation (code changes); on 📋 findings-only tasks, directly on the review target |
-
-> Dispatch templates in `references/templates/`. Harnesses without the `spawn_agent` capability execute inline in the orchestrator; role responsibilities stay unchanged.
-
-## Quality Gates (`run_command` capability)
-
-All four green before done, fixed order:
-
-```text
-lint   → format   → type check   → test
-```
-
-- Concrete commands are defined by the project (e.g. ruff / ruff format --check / mypy --strict / pytest); this skill does not bind any
-- **Must actually be executed and the output pasted as evidence**, never claim "passed" from memory
-- A coverage threshold, if any, belongs to the same test gate (e.g. ≥70%)
-- On failure → locate the root cause before fixing; never delete assertions / relax existing ones to go green
-- **🟢 exception**: on the light channel only lint + format are mandatory (see Tiered Channels); type + test run on demand when the change touches type-relevant or logic/test-relevant code, with the reason recorded
-
-## Conditional Triggers
-
-| Conditional skill | Triggered stage | Condition |
-|-------------------|-----------------|-----------|
-| Isolation skill | After plan confirmed → before implementation | Code changes involved |
-| Decision-record skill | After plan confirmed | An architecture decision was confirmed |
-| Debugging skill | After quality-gate failure | Standard/Full channel (🟢 gate failures are fixed inline; a debug skill may still be used when the failure is non-trivial) |
-| Simplify skill | After quality-gate pass → before review | Standard/Full channel |
-| Security review | After review pass → before verification (Full) / before report (Standard) | Token / auth / permission / crypto / external integration involved |
-| Verification skill | After review pass → before summary | Full channel |
-| Branch-finishing skill | After summary pass | Standard/Full channel |
-
-> How these abstract conditional skills map to loadable skills under a concrete harness is defined in the current adapter's "Conditional Skill Mapping" table (fill-in instructions in `references/adapters/_adapter-template.md` §4).
->
-> Security-review findings are recorded in the review stage (a security addendum on Full) or the summary's Verification Results (Standard); there is no dedicated security-review phase marker — the summary's output contract carries the verdict. A **rejected security review loops back like a rejected review** (implementation → quality gate → review) — never merged with a failing security verdict. The summary's Skill Usage Log covers conditional skills loaded through the summary stage; branch-finishing (post-summary) usage is recorded in the merge stage.
-
-## Output Contract
-
-```markdown
-## Requirement Positioning
-- Classification: <work task / non-work task — verb: <…>; noun: <…>; deliverable: <yes/no>>
-- Ownership: <…>; architecture decision: <none / yes — plan highlights and confirmation result>
-
-## Change List
-- <list of added / modified files, each with file:line and a one-line description>
-
-## Verification Results
-- Quality gates: <summary of lint / format / type / test>; review: <verdict, rejection count>
-
-## Remaining Risks
-- <uncovered edges, todos, items needing manual verification; write "none" if there are none>
-
-## Skill Usage Log
-- <conditional skills this skill loaded and their trigger stages>
-```
-
-> Template in `references/templates/output-contract.md`.
+Dynamic: `find_skill` searches the local skill library after classification (optional). Static fallback: the adapter's §4 mapping table (isolation / decision-record / debugging / simplify / security review / verification / branch-finishing).
 
 ## Constraints
 
-1. On receiving a requirement, first decide the tier and ownership; if information is insufficient, ask first, never guess
-2. Architecture decisions require `ask_user` confirmation before touching code
-3. All quality gates green before review; a rejected review runs the full loop, no skipped steps
-4. The orchestrator must not write large implementations and tests itself (implementation and tests belong to the implementer role)
-5. Never hide quality-gate / test failures; the output contract must be delivered per the channel's report depth (🟢 simplified / 🟡 full five sections / 🔴 full five sections + review verdict + security review / 📋 full five sections with the change list reading "none — findings-only" — see references/templates/output-contract.md)
+1. Ask before guessing: intent-unclear → "do we do it"; scope-fuzzy → clarification gate
+2. Architecture decisions (new port / event / table schema / aggregate behavior) confirmed via `ask_user` before code
+3. No skipped gates, no hidden failures; closing with open blocker/major is illegal
+4. The orchestrator never writes large implementations or tests itself (implementer role)

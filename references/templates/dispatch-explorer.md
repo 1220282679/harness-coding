@@ -7,6 +7,7 @@ description: The dispatch prompt template for the harness-coding explorer (recon
 
 > For use by the `spawn_agent` capability; without it the orchestrator plays the role inline but must still follow this contract.
 > Role definition: **read-only recon**, answers "where is the code, how does it connect, how is the same thing written elsewhere", supplying precise coordinates and reusable patterns for the upcoming change.
+> **Artifact home (v2)**: the explorer is read-only — the **orchestrator** persists this output by appending it to `spec.md`'s Background section (with file:line preserved).
 
 ---
 

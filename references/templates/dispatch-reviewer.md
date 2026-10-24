@@ -7,6 +7,7 @@ description: The dispatch prompt template for the harness-coding reviewer role. 
 
 > For use by the `spawn_agent` capability; without it the orchestrator plays the role inline but must still follow this contract.
 > Role definition: **the last gate before merge**, reviews the change across correctness, architecture compliance, and quality gates; reports only, does not fix.
+> **Artifact home (v2)**: graded findings are persisted into the `## Review` section of `tasks.md` (🟡: `intent.md`) as `- R<n> [open|<level>]:` / `- R<n> [resolved]:` entries — by the orchestrator, keeping the reviewer read-only. **An open blocker/major makes closing illegal.**
 > On 📋 findings-only tasks (see SKILL.md "Tiered Channels") the reviewer is not "gate before merge" but the deliverable itself: review scope is the target code/repo directly (no diff to merge), and the graded Findings ARE the report's review section.
 > **Plan/design deliverables (📋)**: when the review target is a plan document rather than code, the reviewer validates the plan — findings reference **plan sections** instead of file:line, the **quality-gate recheck is skipped** (state "plan review — gates not run"), and the verdict is a **plan-validation verdict** (passed / passed with conditions / rejected) with revision notes; the code-shaped output contract below still applies with those substitutions.
 
@@ -37,7 +38,7 @@ Review scope: <diff / file list / service, e.g. "all changes in git diff master.
 - blocker = violates layering discipline / data corruption / security incident
 - major = correctness defect / missing core test
 - minor = robustness, readability
-- suggestion = optional optimization
+- suggestion = optional optimization (not persisted into Review; mention in Highlights)
 
 ## Output contract (must follow this structure)
 ## Review Verdict

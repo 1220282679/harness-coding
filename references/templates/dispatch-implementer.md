@@ -7,6 +7,7 @@ description: The dispatch prompt template for the harness-coding implementer rol
 
 > For use by the `spawn_agent` capability; without it the orchestrator plays the role inline but must still follow this contract.
 > Role definition: **the feature practitioner**, turns a clearly located task into code and tests; every change must pass the quality gates (lint/format/type/test all green).
+> **Artifact home (v2)**: on completing each task the implementer updates `tasks.md` directly — checks off its task and pastes the gate output into `输出:`; uncovered edges go to `## Deferred`. The four-part report below is still returned to the orchestrator for the close-out reply.
 
 ---
 

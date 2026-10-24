@@ -1,49 +1,45 @@
 ---
 name: harness-coding-template-output-contract
-description: The final-report output contract template for harness-coding. Report structure (requirement positioning/change list/verification results/remaining risks/skill usage log), per-channel report depth, quality-gate evidence format, and the relationship to report closing. Read when the orchestrator delivers the final report.
+description: The close-out reply contract for harness-coding (v2). Structure of the closing chat reply (requirement positioning / verification results / remaining risks), per-channel depth, and quality-gate evidence format. The reply is derived from artifacts + diff — never from memory; no report file is written. Read when the orchestrator delivers the close-out.
 ---
 
-# Output Contract
+# Output Contract (close-out reply, v2)
 
-> The concrete template for the "output contract" in the methodology body. The orchestrator delivers the final report following this structure and ensures the report file is closed.
-> Every completed harness session follows this contract, regardless of channel tier.
+> The concrete template for close-out. The closing reply is a **chat message derived from artifacts + diff** — there is no report file. Durable traceability lives in `specs/<slug>/` + git; an on-demand full view is available via `python scripts/derive-report.py specs/<slug>`.
 
 ---
 
-## Report structure (must be in this order)
+## Reply structure (must be in this order)
 
 ```markdown
 ## Requirement Positioning
-- Classification: <work task / non-work task — verb: <…>; noun: <…>; deliverable: <yes/no>> (per SKILL.md session classification)
-- Ownership: <service / module / repo>; architecture decision: <none / yes — plan highlights and confirmation result>
-
-## Change List
-- <list of added / modified files, each with file:line and a one-line description>
+- Classification: <work task / non-work task — verb: <…>; noun: <…>; deliverable: <yes/no>>
+- Ownership: <service / module / repo>; architecture decisions: <none / yes → point to spec.md AD-ids>
 
 ## Verification Results
-- Quality gates: <summary of lint / format / type / test>
-- Review: <verdict, rejection count>
+- Quality gates: <summary of lint / format / type / test — per-task and close-out re-verification>
+- Review: <verdict; open findings count by level>
 - Security review (if any): <verdict>
 
 ## Remaining Risks
-- <uncovered edges, todos, items needing manual verification; write "none" if there are none>
+- <open `## Deferred` entries verbatim; write "none" when the section is empty>
 
-## Skill Usage Log
-- <conditional skills this skill loaded and their trigger stages, listed one by one>
+## Next Step
+- <merge decision from ask_user: PR / direct merge / keep iterating>
 ```
 
-> **`Verification Results` ≠ the `verification` phase**: the output contract's `## Verification Results` section is a summary section of the final report and is present for every channel; it is distinct from the `verification` phase marker in the report skeleton, which only the 🔴 channel executes (on 🟢/🟡/📋 that phase is written as a `(<channel> skipped)` marker). A present `Verification Results` section does not mean the `verification` phase ran.
+> The old "Skill Usage Log" section is dropped (harness-internal self-audit, no consumer). Conditional-skill usage is visible in the artifacts/repo history where it matters.
 
-## Per-channel report depth
+## Per-channel depth
 
-| Channel | Report depth |
-|---------|-------------|
-| 🟢 Light | Simplified: change list + verification results (lint + format actually executed with pasted output; type/test on demand when the change touches type-relevant or logic/test-relevant code) |
-| 🟡 Standard | Full five sections: positioning / changes / verification / remaining / skill usage log (write "none" when none) |
-| 🔴 Full | Full five sections + review verdict + security review (if any) |
-| 📋 Findings-only | Full five sections: the Change List reads "none — findings-only" (plan/design deliverables: "none — plan-only"); the Verification section carries the review verdict + the graded Findings (for a plan deliverable: the plan-validation verdict in place of code Findings; gate evidence only if the reviewer actually ran the gates) |
+| Channel | Close-out depth |
+|---------|-----------------|
+| 🟢 Light | Inline summary: classification line + change list + verification results (lint + format executed with pasted output; type/test on demand with reason). **Zero files created.** |
+| 🟡 Standard | Full structure above, derived from `intent.md` (Review/Deferred sections) + diff |
+| 🔴 Full | Full structure above, derived from spec/plan/tasks + diff; review verdict from the `## Review` section |
+| 📋 Findings-only | Full structure above; Change List reads "none — findings-only" (plan deliverables: "none — plan-only"); Verification carries the graded Findings / plan-validation verdict |
 
-## Quality-gate evidence format (embedded in the report)
+## Quality-gate evidence format (embedded in the reply)
 
 ```text
 lint:   <command> → <output summary, e.g. "All checks passed">
@@ -52,10 +48,4 @@ type:   <command> → <output summary, e.g. "Success: no issues found">
 test:   <command> → <N passed, M failed; paste key errors on failure>
 ```
 
-> Key principle: **evidence before assertion**. Every "passed/failed" must be backed by actual command output; never claim from memory.
-
-## Relationship between reporting and report closing
-
-1. summary stage: deliver the final report per this contract + close the report from `🔄 in progress` to `✅ passed` / `❌ rejected` (an in-progress report abandoned at init is marked `❌ abandoned` instead)
-2. merge stage: record the merge method (PR / direct merge / keep iterating)
-3. If `metadata.skills_log` is non-empty → append the "Skill Usage Log" table to the report (Skill / Trigger stage / Trigger condition, deduplicated)
+> Key principle: **evidence before assertion**. Every "passed/failed" must be backed by actual command output; never claim from memory. The close-out re-verification (🟡/🔴) output is the authoritative evidence for the reply.
