@@ -1,8 +1,8 @@
 # broken spec
 
-需求: 触发校验失败的样例
-背景: 故意损坏，用于验证校验器有牙齿
+Requirement: sample that triggers validation failures
+Background: deliberately broken, proves the validator has teeth
 
-验收标准:
+Acceptance criteria:
 - AC-1: echo ok
 - AC-4: echo ok4

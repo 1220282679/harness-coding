@@ -61,32 +61,32 @@ def main(argv=None):
     intent = read(d / "intent.md")
     tasks = read(d / "tasks.md") or intent
 
-    print(f"# 追溯视图: {d.name}")
-    print("\n## 需求定位")
-    req = field(spec, "需求") or field(intent, "意图")
-    print(f"- {req or '(未找到)'}")
+    print(f"# Traceable view: {d.name}")
+    print("\n## Requirement")
+    req = field(spec, "Requirement") or field(intent, "Intent")
+    print(f"- {req or '(not found)'}")
 
-    print("\n## 变更清单")
+    print("\n## Change List")
     base = args.base or pick_base()
     mb = git("merge-base", "HEAD", base) if base else None
     if mb and mb.returncode == 0:
         stat = git("diff", "--stat", mb.stdout.strip())
-        body = stat.stdout.strip() or "(无代码变更)"
+        body = stat.stdout.strip() or "(no code changes)"
         print(body)
     else:
-        print(f"(未找到基线 ref，跳过 diff -- 传入 --base <ref> 以启用)")
+        print("(no base ref found, diff skipped -- pass --base <ref> to enable)")
 
-    print("\n## 验证结果")
+    print("\n## Verification Results")
     task_lines = [l.strip() for l in tasks.splitlines() if re.match(r"\s*- \[[ x]\]\s*T\d+", l)]
     if task_lines:
         for l in task_lines:
             print(f"- {l}")
     else:
-        print("- (无任务条目)")
+        print("- (no task entries)")
 
-    print("\n## 剩余风险 (Deferred)")
+    print("\n## Remaining Risks (Deferred)")
     deferred = section(tasks, "Deferred")
-    print(deferred or "- 无")
+    print(deferred or "- none")
 
     return 0
 

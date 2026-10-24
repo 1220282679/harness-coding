@@ -69,10 +69,10 @@ def check_review(text, errs, where):
 
 def check_gate_exemptions(task_text, decl_text, errs, where):
     """Gate N/A protocol: every GATE-NA(<gate>) used anywhere in the task
-    artifacts must have a matching declaration in the spec/intent 门禁豁免
-    section. Full-text scan (not just T-lines) so the 🟡 intent channel --
-    which has no T-lines -- cannot escape the pairing check. Declaration
-    lines themselves are always in `declared`, so they self-satisfy."""
+    artifacts must have a matching declaration in the spec/intent Gate
+    exemptions section. Full-text scan (not just T-lines) so the 🟡 intent
+    channel -- which has no T-lines -- cannot escape the pairing check.
+    Declaration lines themselves are always in `declared`, so they self-satisfy."""
     declared = set(GATE_NA_RE.findall(decl_text))
     body = without_sections(task_text, {"Deferred", "Review"})
     for line in body.splitlines():
@@ -82,12 +82,12 @@ def check_gate_exemptions(task_text, decl_text, errs, where):
             elif gate not in declared:
                 errs.append(
                     f"{where}: uses GATE-NA({gate}) but spec/intent declares no matching "
-                    "门禁豁免 entry (never skip a gate silently)"
+                    "Gate exemptions entry (never skip a gate silently)"
                 )
 
 
 def check_task_file(text, spec_acs, errs, where):
-    body = without_sections(text, {"Deferred", "Review", "意图追加"})
+    body = without_sections(text, {"Deferred", "Review", "Intent Additions"})
     seen_tasks = False
     covered = set()
     for line in body.splitlines():
@@ -103,8 +103,8 @@ def check_task_file(text, spec_acs, errs, where):
             if spec_acs and ac not in spec_acs:
                 errs.append(f"{where}: {tid} references unknown {ac}")
             covered.add(ac)
-        if checked == "x" and "输出:" not in desc and "输出：" not in desc:
-            errs.append(f"{where}: {tid} is checked but has no '输出:' (evidence must accompany the check)")
+        if checked == "x" and "Output:" not in desc and "output:" not in desc:
+            errs.append(f"{where}: {tid} is checked but has no 'Output:' (evidence must accompany the check)")
     if spec_acs and seen_tasks:
         for ac in sorted(spec_acs - covered):
             errs.append(f"{where}: {ac} is not covered by any task (AC<->T closure broken)")
@@ -118,8 +118,8 @@ def validate_task_dir(d):
     names = {p.name for p in d.iterdir() if p.is_file()}
     if "spec.md" in names:
         spec = (d / "spec.md").read_text(encoding="utf-8")
-        if not re.search(r"^需求:", spec, re.M):
-            errs.append(f"{d}/spec.md: missing '需求:' line")
+        if not re.search(r"^Requirement:", spec, re.M):
+            errs.append(f"{d}/spec.md: missing 'Requirement:' line")
         spec_acs = set(AC_RE.findall(spec))
         if not spec_acs:
             errs.append(f"{d}/spec.md: no acceptance criteria (AC-n) found")
@@ -134,7 +134,7 @@ def validate_task_dir(d):
             check_gate_exemptions(tasks_text, spec, errs, f"{d}/tasks.md")
     elif "intent.md" in names:
         intent = (d / "intent.md").read_text(encoding="utf-8")
-        for field in ("意图:", "验证:"):
+        for field in ("Intent:", "Verify:"):
             if not re.search(rf"^{field}", intent, re.M):
                 errs.append(f"{d}/intent.md: missing '{field}' line")
         check_task_file(intent, set(), errs, f"{d}/intent.md")

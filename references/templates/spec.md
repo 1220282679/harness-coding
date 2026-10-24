@@ -1,18 +1,18 @@
 # <slug> spec
 
-需求: <一句话>
-背景: <!-- explorer 将填充：起草时保留此占位符，侦察结论落地时**整体替换本行**（含 file:line），不是追加 -->
+Requirement: <one sentence>
+Background: <!-- explorer will fill: keep this placeholder at draft time; when recon results land, **replace this line wholesale** (with file:line), do not append -->
 
-验收标准:
-<!-- 每条 ID 唯一，尽量写成可执行命令；AC 只增不改，修改旧条目用 supersede 标注（§12）；重构（行为保持）类任务必含一条 "特征测试基线全部通过"（契约 §3） -->
-- AC-1: <可执行命令或明确判据>
+Acceptance criteria:
+<!-- each ID unique, written as an executable command where possible; AC are append-only, mark superseded entries when re-pointing (§12); behavior-preserving refactors must include one "characterization baseline passes unchanged" AC (contract §3) -->
+- AC-1: <executable command or explicit criterion>
 
-假设:
-<!-- 模糊点中低风险、自行决定的部分（§5.3 澄清门产物）；web_search 结论须附来源与检索时间 -->
-- A1: <决定 + 依据>
+Assumptions:
+<!-- low-risk self-decided parts of fuzzy scope (§5.3 clarification-gate output); web_search conclusions must cite source + retrieval time -->
+- A1: <decision + rationale>
 
-门禁豁免:
-<!-- 不适用的门禁必须在此声明并写明原因，禁止静默跳过（契约 §3 Gate N/A protocol）；tasks 勾选行以 GATE-NA(<gate>): 引用，artifact-check 校验配对 -->
-<!-- 示例（占位符形式，不会被视为声明）: - GATE-NA(<gate>): <原因> -->
+Gate exemptions:
+<!-- a non-applicable gate must be declared here with a reason + scope, never skipped silently (contract §3 Gate N/A protocol); tasks reference it via GATE-NA(<gate>):, artifact-check enforces the pairing -->
+<!-- example (placeholder form, not treated as a declaration): - GATE-NA(<gate>): <reason> -->
 
-非目标: <明确排除项>
+Non-goals: <explicit exclusions>

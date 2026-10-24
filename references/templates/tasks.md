@@ -1,14 +1,14 @@
 # <slug> tasks
 
-<!-- 勾选必须附最新命令输出（输出: ...）；AC 只增不改（§12） -->
-- [ ] T1 (AC-1): <描述>; 验证: <命令>
-- [x] T2 (AC-1): <描述>; 验证: <命令>; 输出: <关键输出摘录>
+<!-- a check must carry fresh command output (Output: ...); AC are append-only (§12) -->
+- [ ] T1 (AC-1): <description>; verify: <command>
+- [x] T2 (AC-1): <description>; verify: <command>; Output: <key output excerpt>
 
 ## Deferred
-<!-- 剩余风险的落地形态：未勾选即未完成 -->
-- [ ] D1: <已知缺口/待人工验证项>; 建议后续: <一句话>
+<!-- remaining risks as open checkboxes: unchecked = not done -->
+- [ ] D1: <known gap / item needing manual verification>; suggested follow-up: <one sentence>
 
 ## Review
-<!-- 评审结论的归宿（§5.2）；open 状态的 blocker/major 使收尾不合法 -->
-- R1 [resolved]: <blocker 描述> → 修复于 T3
-- R2 [open|minor]: <minor 描述，仅记录不阻断>
+<!-- where review conclusions land (§5.2); an open blocker/major makes closing illegal -->
+- R1 [resolved]: <blocker description> → fixed in T3
+- R2 [open|minor]: <minor description, recorded only, non-blocking>

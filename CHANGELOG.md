@@ -5,6 +5,23 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.1.0 — 2026-10-24
+
+**Full English pass** — all Chinese removed from the project (docs, templates, scripts, fixtures). Protocol-identifier change: **breaking for artifacts created under ≤2.0.x** (they fail validation until migrated).
+
+### Changed (breaking for existing artifacts)
+
+- Artifact protocol identifiers are now English: `需求:` → `Requirement:`, `意图:` / `验证:` → `Intent:` / `Verify:`, `输出:` → `Output:`, `## 门禁豁免` → `## Gate Exemptions`, `## 意图追加` → `## Intent Additions`, `## 特征测试基线` → `## Characterization baseline`
+- `artifact-check.py` parses the English identifiers; error messages fully English
+- `derive-report.py` output headings English (`Traceable view` / `Requirement` / `Change List` / `Verification Results` / `Remaining Risks (Deferred)`)
+- All four artifact templates, all fixtures, and all docs (README, SDD design doc, CHANGELOG references) translated
+- refactor-flow fixture now carries a baseline AC (AC-3) + matching task, making it a protocol-correct 🔴 refactor sample
+- SKILL.md `version: 2.1.0`
+
+### Migration
+
+Artifacts created under ≤2.0.x: rename the protocol fields per the mapping above (or re-draft from the current templates); then `artifact-check.py specs/` must pass.
+
 ## v2.0.3 — 2026-10-24
 
 Post-v2.0.2 consistency sweep: fixes the drift that pass introduced, plus two real gaps in the Gate N/A protocol. Non-breaking patch.
@@ -20,7 +37,7 @@ Post-v2.0.2 consistency sweep: fixes the drift that pass introduced, plus two re
 
 ### Added
 
-- plan template: 特征测试基线 section (mandatory for behavior-preserving refactors, delete otherwise) — the baseline now has a concrete home.
+- plan template: characterization-baseline section (mandatory for behavior-preserving refactors, delete otherwise) — the baseline now has a concrete home.
 
 ## v2.0.2 — 2026-10-24
 
@@ -32,7 +49,7 @@ Quality-gate scenario adaptation + inline-mode dispatch fix. Non-breaking patch 
 
 ### Added
 
-- **Gate N/A protocol** (contract §3, spec/intent `门禁豁免` section, artifact-check pairing): a non-applicable gate is never silently skipped — declare `- GATE-NA(<gate>): <reason>` in the spec/intent, reference `GATE-NA(<gate>):` in the task output; `artifact-check.py` errors on an undeclared skip. Fixes the "modifying SQL forces type-check" overload.
+- **Gate N/A protocol** (contract §3, spec/intent Gate Exemptions section, artifact-check pairing): a non-applicable gate is never silently skipped — declare `- GATE-NA(<gate>): <reason>` in the spec/intent, reference `GATE-NA(<gate>):` in the task output; `artifact-check.py` errors on an undeclared skip. Fixes the "modifying SQL forces type-check" overload.
 - **Incremental per-task gates** (🟡/🔴): lint/format/type in full + affected test subset; full suite stays mandatory at close-out re-verification. Fixes the "5-task flow = 30 gate calls" time cost.
 - **Coverage threshold source**: project-declared (e.g. `fail_under` in `pyproject.toml`), referenced in adapter gate tables; none declared → plain pass/fail, never invented. Fixes the "patch on an old codebase fails whole-repo coverage" deadlock.
 - **Characterization-test baseline** for behavior-preserving refactors (🔴): plan must build the baseline first; one AC = "baseline tests pass unchanged". Closes the missing "behavior did not change" gate.

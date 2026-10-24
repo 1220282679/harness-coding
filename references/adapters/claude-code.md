@@ -40,7 +40,7 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 | test | `pytest --cov=<module>` | coverage sub-gate enforced only when the project declares a threshold (e.g. `[tool.coverage.report] fail_under`); none declared → plain pass/fail, never invent a number |
 
 - Per-task (🟡/🔴): lint / format / type in full + **affected test subset** (e.g. `pytest tests/<module>/`); full test suite is mandatory at close-out re-verification
-- Gate N/A: declare in spec/intent `## 门禁豁免` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently
+- Gate N/A: declare in spec/intent `## Gate Exemptions` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 

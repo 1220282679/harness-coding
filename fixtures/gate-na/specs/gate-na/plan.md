@@ -1,5 +1,3 @@
 # gate-na plan
 
-1. 审阅 migrations/001_init.sql 的幂等性（IF NOT EXISTS 全覆盖）
-2. 在本地 psql 执行迁移并验证 \dt 输出
-3. lint + test 门禁照常；type/format 按 spec 门禁豁免跳过
+Approach: review the idempotency of migrations/001_init.sql (full IF NOT EXISTS coverage), run the migration against a local psql and verify the \dt output; lint + test gates run as usual, type/format are skipped per the spec's Gate exemptions (chain-wide)

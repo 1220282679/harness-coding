@@ -1,21 +1,21 @@
 # <slug> intent
 
-意图: <一段话>
-验证: <命令>
+Intent: <one paragraph>
+Verify: <command>
 
-## 意图追加
-<!-- 多轮续接（§12）：同一任务链的新需求在此追加，每段带验证命令 -->
-- <追加需求一句话>; 验证: <命令>
+## Intent Additions
+<!-- multi-turn continuation (§12): new requirements of the same task chain append here, each with a verify command -->
+- <follow-up requirement in one sentence>; verify: <command>
 
-## 门禁豁免
-<!-- 不适用的门禁必须在此声明并写明原因，禁止静默跳过（契约 §3 Gate N/A protocol）；勾选行以 GATE-NA(<gate>): 引用，artifact-check 校验配对 -->
-<!-- 示例（占位符形式，不会被视为声明）: - GATE-NA(<gate>): <原因> -->
+## Gate Exemptions
+<!-- a non-applicable gate must be declared here with a reason + scope, never skipped silently (contract §3 Gate N/A protocol); references via GATE-NA(<gate>):, artifact-check enforces the pairing -->
+<!-- example (placeholder form, not treated as a declaration): - GATE-NA(<gate>): <reason> -->
 
 ## Deferred
-<!-- 剩余风险的落地形态：未勾选即未完成 -->
-- [ ] D1: <已知缺口>; 建议后续: <一句话>
+<!-- remaining risks as open checkboxes: unchecked = not done -->
+- [ ] D1: <known gap>; suggested follow-up: <one sentence>
 
 ## Review
-<!-- 评审结论的归宿（§5.2）；open 状态的 blocker/major 使收尾不合法 -->
-- R1 [resolved]: <描述> → 修复于 T2
-- R2 [open|minor]: <描述>
+<!-- where review conclusions land (§5.2); an open blocker/major makes closing illegal -->
+- R1 [resolved]: <description> → fixed in T2
+- R2 [open|minor]: <description>

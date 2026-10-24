@@ -1,13 +1,13 @@
 # <slug> plan
 
-方案要点: <架构与关键取舍>
+Approach: <architecture and key trade-offs>
 
-架构决策:
-<!-- 触发 ask_user 的四类: 新端口 / 新事件 / 表结构 / 聚合行为变更；确认结果必须记录 -->
-- AD-1: <决策 + 确认结果>
+Architecture decisions:
+<!-- the four ask_user triggers: new port / new event / table schema / aggregate behavior change; the confirmation result must be recorded -->
+- AD-1: <decision + confirmation result>
 
-特征测试基线:
-<!-- 仅重构（行为保持）任务必填（契约 §3）：先写 pin 住当前行为的测试并验证通过，再动实现；对应 spec 的"基线测试全部通过"AC。非重构任务删除本节 -->
-- <基线测试文件/命令 + 所 pin 住的现状行为>
+Characterization baseline:
+<!-- required only for behavior-preserving refactors (contract §3): write tests pinning current behavior and verify them green BEFORE touching the implementation; corresponds to the "characterization baseline passes unchanged" AC in the spec. Delete this section for non-refactor tasks -->
+- <baseline test file/command + the current behavior it pins>
 
-任务拆分: 见 tasks.md
+Task breakdown: see tasks.md

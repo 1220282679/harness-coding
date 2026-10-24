@@ -1,99 +1,101 @@
 # harness-coding
 
-**通用 Harness 编码编排技能（v2 · 产物驱动）**
+**Universal harness coding-orchestration skill (v2 · artifact-driven)**
 
-把一行需求变成一次受控的代码变更流程。v2 的核心转变：**状态在产物里，历史在 git 里，证据在门禁输出里，报告只是按需视图**——没有报告文件，没有私有协议状态机。
+Turn a one-line request into a controlled change flow. The core shift in v2: **state lives in artifacts, history lives in git, evidence lives in gate output, and a report is only an on-demand view** — no report files, no private protocol state machine.
 
-> 会话分类判定意图 → 分级通道（🟢 轻量 / 🟡 标准 / 🔴 完整 / 📋 仅结论）选择流程深度 → 前置链路（信息补给 + 澄清门）→ 角色派发（探索 / 实现 / 评审）→ 质量门禁 → 收尾回复 + 按需追溯视图。
+> Session classification decides the intent → a tiered channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only) picks the flow depth → the front pipeline (info-gathering + clarification gate) → role dispatch (explorer / implementer / reviewer) → quality gates → close-out reply + on-demand traceable view.
 
-## 核心思想
+## Core ideas
 
-1. **产物即状态**：任务状态存在于平凡 markdown 产物（`specs/<slug>/` 的 `spec.md` / `plan.md` / `tasks.md`；🟡 单文件 `intent.md`）——恢复 = 读文件，版本 = git，并发 = git 分支
-2. **能力名称即契约**：方法论主体只引用能力名（7 必需 + 5 可选，每项可选能力带降级规则），具体工具由适配器层决定
-3. **纪律 → 结构**：v1 靠 prompt 条款求纪律（"绝不凭记忆声称通过"），v2 靠结构保证（勾选必须附输出、open blocker/major 不得收尾、`artifact-check.py` 机械校验）
-4. **单一事实来源**：接入新 Harness 只需一份适配器文件
+1. **Artifacts as state**: task state lives in plain markdown artifacts (`specs/<slug>/` with `spec.md` / `plan.md` / `tasks.md`; 🟡 single-file `intent.md`) — resume = read files, versioning = git, concurrency = git branches
+2. **The capability name is the contract**: the methodology body references only capability names (7 required + 5 optional, every optional one with a degradation rule); concrete tools are decided by the adapter layer
+3. **Discipline → structure**: v1 begged for discipline via prompt clauses ("never claim pass from memory"); v2 guarantees it structurally (a check must carry output, an open blocker/major blocks closing, `artifact-check.py` enforces mechanically)
+4. **Single source of truth**: onboarding a new harness requires exactly one adapter file
 
-## 通道 × 产物矩阵（主控流唯一真相）
+## Channel × artifact matrix (single source of flow truth)
 
-| 通道 | 产物文件 | 流程 | 收尾交付 |
-|------|----------|------|----------|
-| 🟢 轻量 | **零文件** | 实现 → lint/format | 内联摘要 |
-| 🟡 标准 | `intent.md` | 定位 → 澄清 → 实现 → 门禁 → 评审 → 收尾重验 | 收尾回复（合并 ask_user） |
-| 🔴 完整 | `specs/<slug>/{spec,plan,tasks}.md` | 信息补给 → spec 起草 → 澄清门 → plan → 逐任务实现+门禁 → 评审 → 收尾重验 | 收尾回复 + 按需追溯视图 |
-| 📋 仅结论 | spec/plan **即交付物** | 定位 → 评审校验规格 | 校验结论 |
+| Channel | Artifacts | Flow | Close-out |
+|---------|-----------|------|-----------|
+| 🟢 light | **zero files** | implement → lint/format | inline summary |
+| 🟡 standard | `intent.md` | locate → clarify → implement → gates → review → full re-verify | close-out reply (merge ask_user) |
+| 🔴 full | `specs/<slug>/` with `spec.md` / `plan.md` / `tasks.md` | info-gathering → spec draft → clarification gate → plan → per-task implement+gates → review → full re-verify | close-out reply + on-demand traceable view |
+| 📋 findings-only | spec/plan **IS the deliverable** | locate → review/validate | validation verdict |
 
-- **前置链路**（🟡/🔴，需求模糊时）：信息补给（`find_skill` 本地技能检索 / `web_search` 外部核实）→ 澄清门（模糊点拆**假设**/A-ID 与**问题**/批量一次反问）→ 产物定稿
-- **收尾重验**（🟡/🔴）：逐任务门禁绿 ≠ 全仓绿，收尾前强制全量重跑；合并决策（PR / 直接合并 / 迭代）并入收尾 ask_user
-- **续接协议**：slug 由首个需求生成；后续消息默认追加任务（🟡 = intent.md 加意图段）；通道升级补齐产物、不降级；**AC 只增不改**（修改用 supersede 标注）
+- **Front pipeline** (🟡/🔴, when scope is fuzzy): info-gathering (`find_skill` local skill search / `web_search` external verification) → clarification gate (fuzzy points split into **assumptions**/A-ids vs **questions**/batch one-round ask) → artifacts finalized
+- **Close-out re-verification** (🟡/🔴): per-task green ≠ repo green; a full gate re-run is mandatory before closing; merge decision (PR / merge / iterate) rides the close-out ask_user
+- **Continuation**: slug comes from the first requirement; follow-ups append tasks by default (🟡 = append intent paragraphs); channel upgrades backfill artifacts and never downgrade; **AC are append-only** (re-point with a supersede mark)
 
-## 角色与产物归宿
+## Roles & artifact homes
 
-| 角色 | 职责 | 产出归宿 |
-|------|------|----------|
-| Explorer | 只读侦察（file:line） | `spec.md` 背景节（编排器**替换占位符**，非追加） |
-| Implementer | 实现 + 测试 + 门禁 | `tasks.md` 勾选 + 粘贴 `输出:` |
-| Reviewer | 分级 Findings | `## Review` 节（`R<n> [open\|级别]` / `[resolved]`） |
+| Role | Duty | Output home |
+|------|------|-------------|
+| Explorer | read-only recon (file:line) | `spec.md` Background (orchestrator **replaces the placeholder**, does not append) |
+| Implementer | implement + test + gates | `tasks.md` check + pasted `Output:` |
+| Reviewer | graded findings | `## Review` section (`R<n> [open\|level]` / `[resolved]`) |
 
-**收尾规则：open 状态的 blocker/major 使收尾不合法**——评审拒绝机械地回到实现循环。
+**Closing rule: an open blocker/major makes closing illegal** — review rejection mechanically returns to the implementation loop.
 
-## 质量门禁
+Each role's `spawn_agent` dispatch begins with a mandatory Context step (read the artifacts before any work); inline mode skips it. **Context flows through artifacts, never through parent-session summaries.**
+
+## Quality gates
 
 ```text
 lint → format → type → test
 ```
 
-固定顺序、项目自定义命令（适配器 §2）；证据必须粘贴，绝不凭记忆声称通过；失败先定位根因再修复。🟢 仅强制 lint + format，type/test 按需并记录原因。
+Fixed order, project-defined commands (adapter §2); evidence must be pasted, never claimed from memory; on failure locate the root cause before fixing. 🟢 mandates lint + format only; type/test on demand with a recorded reason.
 
-- **Gate N/A 豁免协议**：不适用的门禁禁止静默跳过——在 spec/intent `门禁豁免` 节声明 `GATE-NA(<gate>): <原因+范围>`，任务输出以同名标记引用，`artifact-check.py` 校验配对（🟡/🔴 全文扫描）；全链豁免收尾同免，任务级豁免收尾全量照常跑
-- **增量 per-task 门禁**：lint/format/type 全跑 + test 受影响子集；全量 test 在收尾重验强制
-- **coverage 阈值项目级声明**（适配器 §2 引用来源）：无声明不强制，绝不发明数字
-- **重构基线**：行为保持型重构先在 plan 建特征测试基线，AC 必含"基线测试全部通过"
+- **Gate N/A exemption protocol**: a non-applicable gate is never silently skipped — declare `GATE-NA(<gate>): <reason + scope>` in the spec/intent `Gate Exemptions` section, reference the same marker in the task output; `artifact-check.py` enforces the pairing (full-text scan on 🟡/🔴). Chain-wide exemptions apply at close-out re-verification too; task-scoped ones do not
+- **Incremental per-task gates**: lint/format/type in full + the affected test subset; the full test suite is mandatory at close-out re-verification
+- **Coverage threshold is project-declared** (source referenced in adapter §2): none declared → plain pass/fail, never invent a number
+- **Refactor baseline**: behavior-preserving refactors build a characterization baseline in plan first; one AC = "baseline passes unchanged"
 
-## 目录结构
+## Directory layout
 
 ```
 harness-coding/
-├── SKILL.md                        # 方法论主体（v2：68 行）
-├── SDD-REFACTOR-DESIGN.md          # v2 重构设计文档（冻结）
+├── SKILL.md                        # methodology body (v2: 68 lines)
+├── SDD-REFACTOR-DESIGN.md          # v2 refactor design doc (frozen)
 ├── references/
-│   ├── capability-contract.md      # 能力契约（7 必需 + 5 可选）
-│   ├── adapters/                   # 适配器层（claude-code / codex / opencode / _template）
-│   └── templates/                  # spec / plan / tasks / intent 产物模板 + 三个角色派发模板 + 收尾契约
+│   ├── capability-contract.md      # capability contract (7 required + 5 optional)
+│   ├── adapters/                   # adapter layer (claude-code / codex / opencode / _template)
+│   └── templates/                  # spec / plan / tasks / intent artifact templates + 3 dispatch templates + close-out contract
 ├── scripts/
-│   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫）
-│   └── derive-report.py            # 按需追溯视图（merge-base 基线，stdout，不落盘）
-└── fixtures/                       # 5 个校验用例（含故意损坏的 broken、合法豁免的 gate-na）
+│   ├── artifact-check.py           # artifact validator (schema / AC↔T closure / review closing guard / Gate N/A pairing)
+│   └── derive-report.py            # on-demand traceable view (merge-base baseline, stdout, never persisted)
+└── fixtures/                       # 5 validation cases (incl. deliberately broken, legal-exemption gate-na)
 ```
 
-## 安装
+## Install
 
-| Harness | 安装路径 |
-|---------|----------|
-| Claude Code | `<project>/.claude/skills/harness-coding/`（或 `~/.claude/skills/`） |
-| opencode | `<project>/.opencode/skills/harness-coding/`（或 `~/.config/opencode/skills/`） |
-| Codex | `<project>/.codex/skills/harness-coding/`（或 `~/.codex/skills/`） |
+| Harness | Path |
+|---------|------|
+| Claude Code | `<project>/.claude/skills/harness-coding/` (or `~/.claude/skills/`) |
+| opencode | `<project>/.opencode/skills/harness-coding/` (or `~/.config/opencode/skills/`) |
+| Codex | `<project>/.codex/skills/harness-coding/` (or `~/.codex/skills/`) |
 
-> 权限放行：宿主项目需在自己的配置中放行 `python scripts/artifact-check.py*` 与 `python scripts/derive-report.py*`（参考本仓库 `.claude/settings.json` / `opencode.json`）。
+> Permissions: the host project must allowlist `python scripts/artifact-check.py*` and `python scripts/derive-report.py*` (see this repo's `.claude/settings.json` / `opencode.json`).
 
-## 验证
+## Verify
 
 ```bash
-python scripts/artifact-check.py --fixtures fixtures/   # 5 用例应全过（broken 预期报错）
-python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
-python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）
+python scripts/artifact-check.py --fixtures fixtures/   # all 5 cases should match (broken expects errors)
+python scripts/artifact-check.py specs/                 # validate the host project's task artifacts
+python scripts/derive-report.py specs/<slug>            # generate the traceable view (stdout)
 ```
 
-## 能力契约与适配器
+## Capability contract & adapters
 
-必需（7）：`read` / `write` / `edit` / `glob` / `grep` / `run_command` / `ask_user`（批量签名，单问原语降级为同轮连续单问）。
-可选（5，均带降级）：`spawn_agent`（内联执行）/ `create_branch`（主线修改 + not isolated）/ `check_command`（跑一次决定）/ `find_skill`（回落适配器 §4 静态条件技能表）/ `web_search`（spec 假设区记 `not verified online`）。
+Required (7): `read` / `write` / `edit` / `glob` / `grep` / `run_command` / `ask_user` (batch signature; single-question primitives degrade to serial asks within one round).
+Optional (5, all with degradation): `spawn_agent` (inline execution) / `create_branch` (main workspace + not isolated) / `check_command` (run once to decide) / `find_skill` (fall back to the adapter §4 static conditional-skill table) / `web_search` (record `not verified online` in spec Assumptions).
 
-接入新 Harness：复制 `_adapter-template.md` 逐节填写 → 跑一个 🟢 任务（必须零新文件）→ 跑一个 🔴 样例验证产物与校验器。详见 `references/capability-contract.md` §6。
+Onboarding a new harness: copy `_adapter-template.md` and fill it section by section → run one 🟢 task (must create zero files) → run one 🔴 sample to verify artifacts + the validator. See `references/capability-contract.md` §6.
 
-## 约束
+## Constraints
 
-1. 先问后猜：意图不明问"做不做"，需求模糊走澄清门
-2. 架构决策（新端口 / 新事件 / 表结构 / 聚合行为变更）动代码前必须 `ask_user` 确认
-3. 不跳门禁、不藏失败；open blocker/major 不得收尾
-4. 编排器不亲自写大型实现与测试（归实现角色）
-5. 网搜结论须附来源与时间；AC 必须本地可执行
+1. Ask before guessing: intent-unclear → "do we do it"; scope-fuzzy → clarification gate
+2. Architecture decisions (new port / new event / table schema / aggregate behavior change) confirmed via `ask_user` before code
+3. No skipped gates, no hidden failures; an open blocker/major blocks closing
+4. The orchestrator never writes large implementations or tests itself (implementer role)
+5. Web-search conclusions must cite source + time; AC must stay locally executable

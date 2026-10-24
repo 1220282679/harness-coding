@@ -1,6 +1,6 @@
 ---
 name: harness-coding
-version: 2.0.3
+version: 2.1.0
 license: MIT
 description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
 ---
@@ -44,13 +44,13 @@ Each role's `spawn_agent` dispatch begins with a mandatory **Context step**: rea
 lint → format → type → test, fixed order, project-defined commands (adapter §2). Evidence pasted, never from memory; failure → root cause → fix → re-run; never delete assertions or relax checks to go green. 🟢: lint + format mandatory; type/test on demand with reason recorded.
 
 - Per-task (🟡/🔴): lint/format/type in full + **affected test subset**; the **full suite runs at close-out re-verification** (mandatory) — per-task green ≠ repo green
-- **Gate N/A** (never skip silently): declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `门禁豁免`, reference `GATE-NA(<gate>):` in the task output — artifact-check enforces the pairing. Scope: **chain-wide** exemptions also apply at close-out re-verification; **task-scoped** exemptions do not — the full suite still runs that gate at close-out
+- **Gate N/A** (never skip silently): declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `Gate Exemptions`, reference `GATE-NA(<gate>):` in the task output — artifact-check enforces the pairing. Scope: **chain-wide** exemptions also apply at close-out re-verification; **task-scoped** exemptions do not — the full suite still runs that gate at close-out
 - **Coverage threshold**: project-declared (adapter §2); none declared → plain test pass/fail, never invent a number
 - **Refactoring (behavior-preserving)**: build a characterization-test baseline in plan first; one AC = "baseline tests pass unchanged"
 
 ## 5. Artifacts & Validation
 
-Templates: `references/templates/{spec,plan,tasks,intent}.md`. Checked tasks must carry `输出:` (pasted evidence). `## Deferred` = remaining risks as open checkboxes. Validate before closing: `python scripts/artifact-check.py specs/` (schema + AC↔T closure + review guard).
+Templates: `references/templates/{spec,plan,tasks,intent}.md`. Checked tasks must carry `Output:` (pasted evidence). `## Deferred` = remaining risks as open checkboxes. Validate before closing: `python scripts/artifact-check.py specs/` (schema + AC↔T closure + review guard).
 
 ## 6. Close-out
 

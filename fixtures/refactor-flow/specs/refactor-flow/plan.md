@@ -1,8 +1,11 @@
 # refactor-flow plan
 
-方案要点: 抽取 RegistrationService，auth.py 仅保留入口转发
+Approach: extract RegistrationService; auth.py keeps only entry-point forwarding
 
-架构决策:
-- AD-1: 不新增事件（已与用户确认，2026-10-24）
+Architecture decisions:
+- AD-1: no new event (confirmed with the user, 2026-10-24)
 
-任务拆分: 见 tasks.md
+Characterization baseline:
+- tests/test_auth.py::test_register_flow pins current registration behavior; verified green before extraction
+
+Task breakdown: see tasks.md

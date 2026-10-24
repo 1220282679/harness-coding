@@ -48,6 +48,6 @@ type:   <command> → <output summary, e.g. "Success: no issues found">
 test:   <command> → <N passed, M failed; paste key errors on failure>
 ```
 
-Exempted gates are shown, never omitted: `type: GATE-NA(type) → declared in spec/intent 门禁豁免 (<reason>)`. At close-out re-verification, chain-wide exemptions keep the exemption line; task-scoped exemptions must show the full-run output instead.
+Exempted gates are shown, never omitted: `type: GATE-NA(type) → declared in spec/intent Gate Exemptions (<reason>)`. At close-out re-verification, chain-wide exemptions keep the exemption line; task-scoped exemptions must show the full-run output instead.
 
 > Key principle: **evidence before assertion**. Every "passed/failed" must be backed by actual command output; never claim from memory. The close-out re-verification (🟡/🔴) output is the authoritative evidence for the reply.

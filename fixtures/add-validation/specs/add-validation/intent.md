@@ -1,14 +1,14 @@
 # add-validation intent
 
-意图: 为注册接口补充参数校验（邮箱格式 / 密码长度）
-验证: python -m pytest tests/test_register.py -q
+Intent: add parameter validation to the register endpoint (email format / password length)
+Verify: python -m pytest tests/test_register.py -q
 
-## 意图追加
-- 密码强度提示信息补全; 验证: python -m pytest tests/test_register.py -q -k hint
+## Intent Additions
+- password-strength hint copy completion; verify: python -m pytest tests/test_register.py -q -k hint
 
 ## Deferred
-- [ ] D1: 密码长度上限待产品确认; 建议后续: 确认后补充规格
+- [ ] D1: password length upper bound pending product confirmation; suggested follow-up: spec it once confirmed
 
 ## Review
-- R1 [resolved]: 缺少邮箱格式校验用例 → 修复于实现
-- R2 [open|minor]: 提示文案可再统一
+- R1 [resolved]: missing email-format test case → fixed during implementation
+- R2 [open|minor]: hint copy could be unified

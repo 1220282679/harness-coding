@@ -60,7 +60,7 @@ lint → format --check → type check --strict → test (including the coverage
 - Concrete commands are project-defined (e.g. `ruff check .` / `ruff format --check .` / `mypy --strict .` / `pytest --cov=...`), written into the adapter's gate table
 - Per-task gates run after each implementation task. **Incremental per-task mode (🟡/🔴)**: lint / format / type always run in full (they are fast); `test` may run the **affected subset only** (e.g. `pytest tests/<module>/ -k <scope>`) — the full suite is mandatory at close-out re-verification. 🟢: lint + format mandatory, type/test on demand with reason recorded (unchanged)
 - **Gate N/A protocol** — a gate that does not apply is **never silently skipped**. Skipping requires a pairing:
-  1. **Declaration** in the spec's (🔴) or intent's (🟡) `## 门禁豁免` section: `- GATE-NA(<gate>): <reason + scope>` (e.g. "docs-only change, no code to type-check")
+  1. **Declaration** in the spec's (🔴) or intent's (🟡) `## Gate Exemptions` section: `- GATE-NA(<gate>): <reason + scope>` (e.g. "docs-only change, no code to type-check")
   2. **Reference** at the point of use: the task's pasted output states `GATE-NA(<gate>): declared in spec` instead of that gate's output
   `artifact-check.py` verifies every `GATE-NA(<gate>)` used in tasks has a matching declaration; an undeclared skip is a validation error
   **Scope semantics (mandatory)**: each declaration states its scope — **chain-wide** (e.g. "project has no type system") or **task-scoped** (e.g. "T3 touches only SQL"). A chain-wide exemption also applies at close-out re-verification; a task-scoped exemption does **not** — the close-out full run still executes that gate. When in doubt, treat the exemption as task-scoped (safer: the close-out run decides)
