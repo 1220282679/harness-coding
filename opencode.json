@@ -1,9 +1,8 @@
 {
   "permission": {
     "bash": {
-      "python scripts/smoke-report.py": "allow",
-      "python scripts/workflow-check.py": "allow",
-      "python scripts/consistency-check.py": "allow",
+      "python scripts/artifact-check.py*": "allow",
+      "python scripts/derive-report.py*": "allow",
       "echo exit*": "allow"
     }
   }
