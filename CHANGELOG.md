@@ -5,6 +5,23 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.0.3 — 2026-10-24
+
+Post-v2.0.2 consistency sweep: fixes the drift that pass introduced, plus two real gaps in the Gate N/A protocol. Non-breaking patch.
+
+### Fixed
+
+- **Explorer append/replace contradiction (7 files)**: the spec template's Background placeholder is **replaced**, but SKILL.md, contract §4, dispatch-explorer.md, all three adapters and the adapter template still said "append". All synchronized to replace.
+- **SKILL.md §3 vs dispatch templates**: the Context step is now stated as `spawn_agent`-only with the inline-mode exception, matching the templates.
+- **Gate N/A scope semantics**: declarations must state scope — chain-wide exemptions apply at close-out re-verification too; task-scoped ones do not (the full run still executes that gate). When in doubt, treat as task-scoped. Output-contract shows how exempted gates appear in the closing reply.
+- **🟡 GATE-NA validation blind spot**: `check_gate_exemptions` now scans full artifact text (minus Deferred/Review), not just `T<n>` lines — intent-channel exemption usages can no longer escape the pairing check.
+- `derive-report.py`: dropped the `-- .` path restriction so the diff is correct regardless of the caller's working directory.
+- Version/frontmatter drift: SKILL.md `version: 2.0.3`; README fixture count (5), SKILL.md line count, explorer replace semantics, and the new gate mechanisms synced.
+
+### Added
+
+- plan template: 特征测试基线 section (mandatory for behavior-preserving refactors, delete otherwise) — the baseline now has a concrete home.
+
 ## v2.0.2 — 2026-10-24
 
 Quality-gate scenario adaptation + inline-mode dispatch fix. Non-breaking patch over v2.0.1.

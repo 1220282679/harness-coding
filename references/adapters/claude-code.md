@@ -46,7 +46,7 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 
 | Role | Agent type in Claude Code | Notes |
 |------|---------------------------|-------|
-| `explorer` | **Explore** agent (read-only) | output goes to `spec.md` Background (append) |
+| `explorer` | **Explore** agent (read-only) | output goes to `spec.md` Background (orchestrator **replaces** the placeholder) |
 | `implementer` | **general-purpose** agent | implementation + tests + gates; checks off tasks with pasted gate output |
 | `reviewer` | **general-purpose** agent, or a dedicated code-reviewer agent type if registered | graded findings land in the `## Review` section |
 

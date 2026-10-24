@@ -50,7 +50,7 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 
 | Role | Agent type in opencode | Notes |
 |------|-------------------------|-------|
-| `explorer` | built-in **`explore`** subagent | read-only: read / grep / glob / list; output goes to `spec.md` Background (append) |
+| `explorer` | built-in **`explore`** subagent | read-only: read / grep / glob / list; output goes to `spec.md` Background (orchestrator **replaces** the placeholder) |
 | `implementer` | built-in **`general`** subagent, or a custom agent in `.opencode/agents/` | implementation + tests + gates; checks off tasks with pasted gate output |
 | `reviewer` | a custom read-only reviewer agent (e.g. `.opencode/agents/reviewer.md`, `mode: subagent`, `permission` allows `bash` for gate rechecks), else **`general`** with the reviewer dispatch prompt | graded findings land in the `## Review` section |
 

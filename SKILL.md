@@ -1,6 +1,6 @@
 ---
 name: harness-coding
-version: 2.0.0
+version: 2.0.3
 license: MIT
 description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
 ---
@@ -35,16 +35,16 @@ Record one line per verdict: `<verdict> — verb: <…>; noun: <…>; deliverabl
 
 ## 3. Roles & Dispatch (`spawn_agent` optional → inline; templates in `references/templates/dispatch-*.md`)
 
-explorer: read-only recon → orchestrator appends results to `spec.md` Background. implementer: lands code + tests, checks off its tasks in `tasks.md` with pasted gate output. reviewer: graded findings (blocker/major/minor) → `## Review` section. **Closing rule: an open blocker/major makes closing illegal** (artifact-check enforces).
+explorer: read-only recon → orchestrator **replaces** the Background placeholder in `spec.md` with the results (not appends). implementer: lands code + tests, checks off its tasks in `tasks.md` with pasted gate output. reviewer: graded findings (blocker/major/minor) → `## Review` section. **Closing rule: an open blocker/major makes closing illegal** (artifact-check enforces).
 
-Each role's dispatch begins with a mandatory **Context step**: read the relevant artifacts (`spec.md` / `plan.md` / `tasks.md`) before any work. **Context flows through artifacts, never through parent-session summaries** — the `spawn_agent(role, prompt)` prompt carries only a task pointer + role discipline; the sub-agent `read`s the artifacts itself to get the full picture.
+Each role's `spawn_agent` dispatch begins with a mandatory **Context step**: read the relevant artifacts (`spec.md` / `plan.md` / `tasks.md`) before any work. Inline mode (no spawn_agent) skips it — the orchestrator already holds the artifacts. **Context flows through artifacts, never through parent-session summaries** — the `spawn_agent(role, prompt)` prompt carries only a task pointer + role discipline; the sub-agent `read`s the artifacts itself to get the full picture.
 
 ## 4. Quality Gates (`run_command`)
 
 lint → format → type → test, fixed order, project-defined commands (adapter §2). Evidence pasted, never from memory; failure → root cause → fix → re-run; never delete assertions or relax checks to go green. 🟢: lint + format mandatory; type/test on demand with reason recorded.
 
 - Per-task (🟡/🔴): lint/format/type in full + **affected test subset**; the **full suite runs at close-out re-verification** (mandatory) — per-task green ≠ repo green
-- **Gate N/A** (never skip silently): declare `- GATE-NA(<gate>): <reason>` in spec/intent `门禁豁免`, reference `GATE-NA(<gate>):` in the task output — artifact-check enforces the pairing
+- **Gate N/A** (never skip silently): declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `门禁豁免`, reference `GATE-NA(<gate>):` in the task output — artifact-check enforces the pairing. Scope: **chain-wide** exemptions also apply at close-out re-verification; **task-scoped** exemptions do not — the full suite still runs that gate at close-out
 - **Coverage threshold**: project-declared (adapter §2); none declared → plain test pass/fail, never invent a number
 - **Refactoring (behavior-preserving)**: build a characterization-test baseline in plan first; one AC = "baseline tests pass unchanged"
 

@@ -30,7 +30,7 @@
 
 | 角色 | 职责 | 产出归宿 |
 |------|------|----------|
-| Explorer | 只读侦察（file:line） | `spec.md` 背景节（编排器追加） |
+| Explorer | 只读侦察（file:line） | `spec.md` 背景节（编排器**替换占位符**，非追加） |
 | Implementer | 实现 + 测试 + 门禁 | `tasks.md` 勾选 + 粘贴 `输出:` |
 | Reviewer | 分级 Findings | `## Review` 节（`R<n> [open\|级别]` / `[resolved]`） |
 
@@ -44,11 +44,16 @@ lint → format → type → test
 
 固定顺序、项目自定义命令（适配器 §2）；证据必须粘贴，绝不凭记忆声称通过；失败先定位根因再修复。🟢 仅强制 lint + format，type/test 按需并记录原因。
 
+- **Gate N/A 豁免协议**：不适用的门禁禁止静默跳过——在 spec/intent `门禁豁免` 节声明 `GATE-NA(<gate>): <原因+范围>`，任务输出以同名标记引用，`artifact-check.py` 校验配对（🟡/🔴 全文扫描）；全链豁免收尾同免，任务级豁免收尾全量照常跑
+- **增量 per-task 门禁**：lint/format/type 全跑 + test 受影响子集；全量 test 在收尾重验强制
+- **coverage 阈值项目级声明**（适配器 §2 引用来源）：无声明不强制，绝不发明数字
+- **重构基线**：行为保持型重构先在 plan 建特征测试基线，AC 必含"基线测试全部通过"
+
 ## 目录结构
 
 ```
 harness-coding/
-├── SKILL.md                        # 方法论主体（v2：61 行）
+├── SKILL.md                        # 方法论主体（v2：68 行）
 ├── SDD-REFACTOR-DESIGN.md          # v2 重构设计文档（冻结）
 ├── references/
 │   ├── capability-contract.md      # 能力契约（7 必需 + 5 可选）
@@ -57,7 +62,7 @@ harness-coding/
 ├── scripts/
 │   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫）
 │   └── derive-report.py            # 按需追溯视图（merge-base 基线，stdout，不落盘）
-└── fixtures/                       # 4 个校验用例（含故意损坏的 broken）
+└── fixtures/                       # 5 个校验用例（含故意损坏的 broken、合法豁免的 gate-na）
 ```
 
 ## 安装
@@ -73,7 +78,7 @@ harness-coding/
 ## 验证
 
 ```bash
-python scripts/artifact-check.py --fixtures fixtures/   # 4 用例应全过（broken 预期报错）
+python scripts/artifact-check.py --fixtures fixtures/   # 5 用例应全过（broken 预期报错）
 python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
 python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）
 ```

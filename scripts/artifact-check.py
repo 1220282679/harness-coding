@@ -68,21 +68,20 @@ def check_review(text, errs, where):
 
 
 def check_gate_exemptions(task_text, decl_text, errs, where):
-    """Gate N/A protocol: every GATE-NA(<gate>) used in a task line must have a
-    matching declaration in the spec/intent 门禁豁免 section. Never skip silently."""
+    """Gate N/A protocol: every GATE-NA(<gate>) used anywhere in the task
+    artifacts must have a matching declaration in the spec/intent 门禁豁免
+    section. Full-text scan (not just T-lines) so the 🟡 intent channel --
+    which has no T-lines -- cannot escape the pairing check. Declaration
+    lines themselves are always in `declared`, so they self-satisfy."""
     declared = set(GATE_NA_RE.findall(decl_text))
-    body = without_sections(task_text, {"Deferred", "Review", "意图追加"})
+    body = without_sections(task_text, {"Deferred", "Review"})
     for line in body.splitlines():
-        m = TASK_RE.match(line)
-        if not m:
-            continue
-        checked, tid, refs, desc = m.groups()
-        for gate in GATE_NA_RE.findall(desc):
+        for gate in GATE_NA_RE.findall(line):
             if gate not in GATES:
-                errs.append(f"{where}: {tid} references GATE-NA({gate}) -- unknown gate (use lint/format/type/test)")
+                errs.append(f"{where}: GATE-NA({gate}) -- unknown gate (use lint/format/type/test)")
             elif gate not in declared:
                 errs.append(
-                    f"{where}: {tid} uses GATE-NA({gate}) but spec/intent declares no matching "
+                    f"{where}: uses GATE-NA({gate}) but spec/intent declares no matching "
                     "门禁豁免 entry (never skip a gate silently)"
                 )
 

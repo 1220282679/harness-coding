@@ -48,7 +48,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness (v2). 
 
 | Role | Agent type in Codex | Notes |
 |------|----------------------|-------|
-| `explorer` | **`explorer`** built-in subagent | read-only recon; output goes to `spec.md` Background (append) |
+| `explorer` | **`explorer`** built-in subagent | read-only recon; output goes to `spec.md` Background (orchestrator **replaces** the placeholder) |
 | `implementer` | **`worker`** built-in subagent, or a custom TOML agent in `.codex/agents/` | implementation + tests + gates; checks off tasks with pasted gate output |
 | `reviewer` | a custom read-only TOML subagent (e.g. `.codex/agents/reviewer.toml`), else **`default`** with the reviewer dispatch prompt | graded findings land in the `## Review` section; the reviewer agent must be allowed to run the gates |
 

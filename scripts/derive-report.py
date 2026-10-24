@@ -70,7 +70,7 @@ def main(argv=None):
     base = args.base or pick_base()
     mb = git("merge-base", "HEAD", base) if base else None
     if mb and mb.returncode == 0:
-        stat = git("diff", "--stat", mb.stdout.strip(), "--", ".")
+        stat = git("diff", "--stat", mb.stdout.strip())
         body = stat.stdout.strip() or "(无代码变更)"
         print(body)
     else:

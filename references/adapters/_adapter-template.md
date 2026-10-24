@@ -54,7 +54,7 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 
 | Role | Agent type in this harness | Notes |
 |------|----------------------------|-------|
-| `explorer` | fill-in | read-only recon; output → `spec.md` Background (append) |
+| `explorer` | fill-in | read-only recon; output → `spec.md` Background (orchestrator **replaces** the placeholder) |
 | `implementer` | fill-in | implementation + tests + gates; checks off tasks with pasted gate output |
 | `reviewer` | fill-in | graded findings → `## Review` section |
 
