@@ -5,6 +5,30 @@ description: Release history for the harness-coding skill. Tracks the initial re
 
 # Changelog
 
+## v2.0.0 — 2026-10-24
+
+Artifact-driven rewrite (SDD), per `SDD-REFACTOR-DESIGN.md` (frozen). Breaking change: the v1 reporting protocol and its reports are not migrated.
+
+### Changed
+
+- SKILL.md rewritten 174 → 61 lines: session classification + channel×artifact matrix + continuation protocol; methodology references only capability names
+- Capability contract: 7 required (`write_report` deleted) + 5 optional — `find_skill` / `web_search` added, `run_quality_gate` removed, `ask_user` extended to batch `questions[]` with serial-round degradation
+- Adapters slimmed: report config rows removed; `find_skill` / `web_search` mappings added; static conditional-skill table repurposed as the `find_skill` fallback; closing rule (open blocker/major blocks closing) declared
+- Dispatch templates: roles get artifact homes (explorer → spec Background; implementer → tasks checkboxes with pasted output; reviewer → `## Review` section)
+
+### Added
+
+- Artifact layer: `specs/<slug>/` with `spec.md` / `plan.md` / `tasks.md` (🔴) and single-file `intent.md` (🟡); AC/T/R/D id conventions; Deferred = remaining risks as open checkboxes
+- `scripts/artifact-check.py` (~170 lines): artifact schema, AC↔T closure, evidence-with-check, Review open-blocker closing guard; `--fixtures` runner
+- `fixtures/`: 4 cases (fix-typo / add-validation / refactor-flow / deliberately broken) with `.expect` markers
+- `scripts/derive-report.py`: on-demand traceable view from tasks + merge-base diff (stdout, never persisted)
+- Clarification gate (assumptions vs questions, batch one-round ask) + info-gathering layer; continuation protocol (slug ownership, channel-upgrade backfill, AC append-only)
+- Close-out re-verification (full gates before closing) and merge ask_user restored from v1 steps 8/10
+
+### Removed
+
+- The v1 reporting protocol state machine and its machinery: `scripts/report_lib.py`, `scripts/smoke-report.py`, `scripts/consistency-check.py`, `scripts/workflow-check.py`; `templates/write-report.md`, `templates/report-template.md`; runtime config `report.dir` / `report.prefix` / `report.on_disk`; per-task report versioning, collision guard, archive, inline-only mode
+
 ## v1.0.0 — 2026-08-20
 
 Initial release of the universal harness-agnostic coding orchestration skill (MIT license).
