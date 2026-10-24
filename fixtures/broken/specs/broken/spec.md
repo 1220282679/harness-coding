@@ -5,3 +5,4 @@
 
 验收标准:
 - AC-1: echo ok
+- AC-4: echo ok4

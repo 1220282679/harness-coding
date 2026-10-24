@@ -21,6 +21,7 @@ description: The dispatch prompt template for the harness-coding reviewer role. 
 Review scope: <diff / file list / service, e.g. "all changes in git diff master...HEAD">
 
 ## Context (mandatory first step)
+> Scope: `spawn_agent` dispatches only. Inline mode (no spawn_agent capability): skip this section — the orchestrator already wrote/holds these artifacts; it must still persist findings into the `## Review` section per the artifact home below.
 read `specs/<slug>/spec.md`, `plan.md`, and `tasks.md` before any review — the artifacts are the source of truth for what the change was supposed to do (AC ids), what was deferred (## Deferred), and prior review rounds (## Review). Cross-check the diff against the AC ids the implementer claimed to satisfy. If artifacts are missing → report "cannot review without artifacts", do NOT proceed.
 For 📋 plan-validation tasks where the plan IS the deliverable: read the plan document under review directly (no specs/ dir exists yet).
 

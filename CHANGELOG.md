@@ -1,9 +1,30 @@
 ---
 name: harness-coding-changelog
-description: Release history for the harness-coding skill. Tracks the initial release and the review-driven hardening passes across the reporting protocol, adapters, and validators.
+description: Release history for the harness-coding skill. Covers the v2 artifact-driven rewrite (SDD), the dispatch-protocol hardening, and the quality-gate scenario-adaptation pass (Gate N/A, incremental gates, coverage source, characterization baseline).
 ---
 
 # Changelog
+
+## v2.0.2 — 2026-10-24
+
+Quality-gate scenario adaptation + inline-mode dispatch fix. Non-breaking patch over v2.0.1.
+
+### Fixed
+
+- **Inline-mode dispatch contradiction**: the mandatory Context step (v2.0.1) now scopes to `spawn_agent` dispatches only — in inline mode the orchestrator already wrote/holds the artifacts, forcing it to re-read them was pure waste. All three dispatch templates carry the scope note.
+
+### Added
+
+- **Gate N/A protocol** (contract §3, spec/intent `门禁豁免` section, artifact-check pairing): a non-applicable gate is never silently skipped — declare `- GATE-NA(<gate>): <reason>` in the spec/intent, reference `GATE-NA(<gate>):` in the task output; `artifact-check.py` errors on an undeclared skip. Fixes the "modifying SQL forces type-check" overload.
+- **Incremental per-task gates** (🟡/🔴): lint/format/type in full + affected test subset; full suite stays mandatory at close-out re-verification. Fixes the "5-task flow = 30 gate calls" time cost.
+- **Coverage threshold source**: project-declared (e.g. `fail_under` in `pyproject.toml`), referenced in adapter gate tables; none declared → plain pass/fail, never invented. Fixes the "patch on an old codebase fails whole-repo coverage" deadlock.
+- **Characterization-test baseline** for behavior-preserving refactors (🔴): plan must build the baseline first; one AC = "baseline tests pass unchanged". Closes the missing "behavior did not change" gate.
+- `fixtures/gate-na`: legal-exemption case; `broken` gains an undeclared-exemption error (6 error classes now covered).
+
+### Changed
+
+- spec template: Background placeholder semantics clarified (explorer **replaces** the placeholder, not appends); gate-exemption section added; refactor AC requirement noted.
+- `.gitattributes` added (`* text=auto eol=lf`) to stop CRLF churn on Windows.
 
 ## v2.0.1 — 2026-10-24
 

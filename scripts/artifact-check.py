@@ -16,6 +16,8 @@ AC_RE = re.compile(r"^\s*-\s*(AC-\d+)\s*:", re.M)
 TASK_RE = re.compile(r"^\s*-\s*\[([ x])\]\s*(T\d+)\s*\(([^)]*)\)\s*:(.*)")
 REVIEW_RE = re.compile(r"^\s*-\s*(R\d+)\s*\[([^\]]+)\]\s*:?(\s*.*)")
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
+GATE_NA_RE = re.compile(r"GATE-NA\((\w+)\)")
+GATES = {"lint", "format", "type", "test"}
 LEVELS = {"blocker", "major", "minor"}
 
 
@@ -65,6 +67,26 @@ def check_review(text, errs, where):
             )
 
 
+def check_gate_exemptions(task_text, decl_text, errs, where):
+    """Gate N/A protocol: every GATE-NA(<gate>) used in a task line must have a
+    matching declaration in the spec/intent 门禁豁免 section. Never skip silently."""
+    declared = set(GATE_NA_RE.findall(decl_text))
+    body = without_sections(task_text, {"Deferred", "Review", "意图追加"})
+    for line in body.splitlines():
+        m = TASK_RE.match(line)
+        if not m:
+            continue
+        checked, tid, refs, desc = m.groups()
+        for gate in GATE_NA_RE.findall(desc):
+            if gate not in GATES:
+                errs.append(f"{where}: {tid} references GATE-NA({gate}) -- unknown gate (use lint/format/type/test)")
+            elif gate not in declared:
+                errs.append(
+                    f"{where}: {tid} uses GATE-NA({gate}) but spec/intent declares no matching "
+                    "门禁豁免 entry (never skip a gate silently)"
+                )
+
+
 def check_task_file(text, spec_acs, errs, where):
     body = without_sections(text, {"Deferred", "Review", "意图追加"})
     seen_tasks = False
@@ -110,6 +132,7 @@ def validate_task_dir(d):
             if not check_task_file(tasks_text, spec_acs, errs, f"{d}/tasks.md"):
                 errs.append(f"{d}/tasks.md: no task lines found")
             check_review(tasks_text, errs, f"{d}/tasks.md")
+            check_gate_exemptions(tasks_text, spec, errs, f"{d}/tasks.md")
     elif "intent.md" in names:
         intent = (d / "intent.md").read_text(encoding="utf-8")
         for field in ("意图:", "验证:"):
@@ -117,6 +140,7 @@ def validate_task_dir(d):
                 errs.append(f"{d}/intent.md: missing '{field}' line")
         check_task_file(intent, set(), errs, f"{d}/intent.md")
         check_review(intent, errs, f"{d}/intent.md")
+        check_gate_exemptions(intent, intent, errs, f"{d}/intent.md")
     else:
         errs.append(f"{d}: no spec.md (full channel) or intent.md (standard channel) found")
     return errs

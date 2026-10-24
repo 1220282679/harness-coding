@@ -19,6 +19,7 @@ description: The dispatch prompt template for the harness-coding implementer rol
 Task: <an implementation task with a clear location, e.g. "add a /knowledge/rerank endpoint to knowledge-service">
 
 ## Context (mandatory first step)
+> Scope: `spawn_agent` dispatches only. Inline mode (no spawn_agent capability): skip this section — the orchestrator already wrote/holds these artifacts; it must still update `tasks.md` with the same evidence discipline.
 read `specs/<slug>/spec.md`, `plan.md`, and `tasks.md` before writing any code. Pay attention to: AC ids cited by your task (must satisfy all), A-* assumptions (must respect), non-goals (must not implement). If any artifact is missing or your task id is not found in tasks.md → report back "missing artifact or task not registered", do NOT proceed — registering the task in tasks.md is the orchestrator's responsibility, not yours.
 After reading the artifacts, read same-layer same-shape files and their tests to reuse existing conventions before writing new code.
 

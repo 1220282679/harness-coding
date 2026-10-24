@@ -43,6 +43,11 @@ Each role's dispatch begins with a mandatory **Context step**: read the relevant
 
 lint → format → type → test, fixed order, project-defined commands (adapter §2). Evidence pasted, never from memory; failure → root cause → fix → re-run; never delete assertions or relax checks to go green. 🟢: lint + format mandatory; type/test on demand with reason recorded.
 
+- Per-task (🟡/🔴): lint/format/type in full + **affected test subset**; the **full suite runs at close-out re-verification** (mandatory) — per-task green ≠ repo green
+- **Gate N/A** (never skip silently): declare `- GATE-NA(<gate>): <reason>` in spec/intent `门禁豁免`, reference `GATE-NA(<gate>):` in the task output — artifact-check enforces the pairing
+- **Coverage threshold**: project-declared (adapter §2); none declared → plain test pass/fail, never invent a number
+- **Refactoring (behavior-preserving)**: build a characterization-test baseline in plan first; one AC = "baseline tests pass unchanged"
+
 ## 5. Artifacts & Validation
 
 Templates: `references/templates/{spec,plan,tasks,intent}.md`. Checked tasks must carry `输出:` (pasted evidence). `## Deferred` = remaining risks as open checkboxes. Validate before closing: `python scripts/artifact-check.py specs/` (schema + AC↔T closure + review guard).

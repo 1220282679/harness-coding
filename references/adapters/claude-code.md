@@ -37,9 +37,10 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 | lint | `ruff check .` | e.g. eslint / gofmt -l |
 | format | `ruff format --check .` | e.g. prettier --check |
 | type | `mypy --strict .` | e.g. tsc --noEmit |
-| test | `pytest --cov=<module>` | the coverage threshold belongs to this gate |
+| test | `pytest --cov=<module>` | coverage sub-gate enforced only when the project declares a threshold (e.g. `[tool.coverage.report] fail_under`); none declared → plain pass/fail, never invent a number |
 
-Full re-run before closing (🟡/🔴 close-out re-verification) is mandatory.
+- Per-task (🟡/🔴): lint / format / type in full + **affected test subset** (e.g. `pytest tests/<module>/`); full test suite is mandatory at close-out re-verification
+- Gate N/A: declare in spec/intent `## 门禁豁免` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 

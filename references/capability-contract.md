@@ -58,7 +58,13 @@ lint → format --check → type check --strict → test (including the coverage
 ```
 
 - Concrete commands are project-defined (e.g. `ruff check .` / `ruff format --check .` / `mypy --strict .` / `pytest --cov=...`), written into the adapter's gate table
-- Per-task gates run after each implementation task; a **full re-run is mandatory before closing** (🟡/🔴 close-out re-verification): per-task green ≠ repo green — later tasks may break earlier verified behavior
+- Per-task gates run after each implementation task. **Incremental per-task mode (🟡/🔴)**: lint / format / type always run in full (they are fast); `test` may run the **affected subset only** (e.g. `pytest tests/<module>/ -k <scope>`) — the full suite is mandatory at close-out re-verification. 🟢: lint + format mandatory, type/test on demand with reason recorded (unchanged)
+- **Gate N/A protocol** — a gate that does not apply is **never silently skipped**. Skipping requires a pairing:
+  1. **Declaration** in the spec's (🔴) or intent's (🟡) `## 门禁豁免` section: `- GATE-NA(<gate>): <reason>` (e.g. "docs-only change, no code to type-check")
+  2. **Reference** at the point of use: the task's pasted output states `GATE-NA(<gate>): declared in spec` instead of that gate's output
+  `artifact-check.py` verifies every `GATE-NA(<gate>)` used in tasks has a matching declaration; an undeclared skip is a validation error
+- **Coverage threshold source**: the threshold is **project-declared** (e.g. `[tool.coverage.report] fail_under` in `pyproject.toml`, `coverageThreshold` in jest config) and referenced in the adapter's gate table. If the project declares none, the coverage sub-gate is **not enforced** — plain test pass/fail suffices; never invent a number, never block an old codebase's patch on an unreachable whole-repo threshold
+- **Behavior-preserving refactors (🔴)**: when the spec marks the change behavior-preserving (refactor), the **plan must first build a characterization-test baseline** (tests that pin current behavior), and at least one AC must be "baseline tests pass unchanged". The test gate then runs baseline + new tests — this is the refactor's equivalent of a regression gate
 - Any failure → locate the root cause → fix → re-run from the failed gate; never delete assertions or loosen existing ones for a green light
 
 ## 4. Role Abstraction (optional `spawn_agent` capability)
