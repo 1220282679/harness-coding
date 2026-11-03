@@ -1,6 +1,6 @@
 ---
 name: harness-coding
-version: 2.2.2
+version: 2.2.3
 license: MIT
 description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
 ---

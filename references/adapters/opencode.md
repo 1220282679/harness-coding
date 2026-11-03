@@ -17,14 +17,14 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 
 | Capability | Implementation in opencode | Notes |
 |------------|-----------------------------|-------|
-| `read` | **tool.read** | Returns file content tagged with line numbers; also lists directory contents on v1.1.60+ natively. **tool.list** remains available for explicit directory browsing (see §6) |
-| `write` | **tool.write** | Create / overwrite a file; gated by the `edit` permission key. Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §6) |
+| `read` | **tool.read** | Returns file content tagged with line numbers; also lists directory contents on v1.1.60+ natively. **tool.list** remains available for explicit directory browsing (see §7) |
+| `write` | **tool.write** | Create / overwrite a file; gated by the `edit` permission key. Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §7) |
 | `edit` | **tool.edit** (string replacement) or **tool.apply_patch** (unified diff) | Unique-match rule: a `tool.edit` with multiple matches needs a narrower context. Both gated by the `edit` permission key |
 | `glob` | **tool.glob** | pattern-match file listing (e.g. `specs/<slug>/*`) |
 | `grep` | **tool.grep** | regex content search, ripgrep-style; matches with file:line |
 | `run_command` | **tool.bash** | The only channel for quality gates. Permission `bash` supports an allow/ask/deny mode plus a command glob-pattern map |
-| `ask_user` | **tool.question** | Asks the user mid-execution. Batch: `tool.question` handles one question per call → serial asks within the same clarification round (see §6). When unavailable (non-interactive run) → degrade per §4 |
-| `spawn_agent` | **tool.task** (optional) | Spawns a subagent defined in `.opencode/agents/` (or `~/.config/opencode/agents/`); also invoked via `@<name>` mentions. Subagents can use only built-in tools (see §6) |
+| `ask_user` | **tool.question** | Asks the user mid-execution. Batch: `tool.question` handles one question per call → serial asks within the same clarification round (see §7). When unavailable (non-interactive run) → degrade per §4 |
+| `spawn_agent` | **tool.task** (optional) | Spawns a subagent defined in `.opencode/agents/` (or `~/.config/opencode/agents/`); also invoked via `@<name>` mentions. Subagents can use only built-in tools (see §7) |
 | `create_branch` | **tool.bash** `git checkout -b <name>` (optional) | no native worktree primitive; a worktree = `tool.bash` + `git worktree add` |
 | `check_command` | **tool.bash** `command -v <cmd>` (optional) | run once to decide |
 | `web_search` | No bundled search primitive → via an MCP search plugin if configured, else **tool.bash** + `curl` against an allowed API (optional; verify at setup) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |

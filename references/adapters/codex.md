@@ -17,8 +17,8 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness (v2). 
 
 | Capability | Implementation in Codex | Notes |
 |------------|--------------------------|-------|
-| `read` | **read_file** tool | Reads a single file's content. **Deviation**: directory reads NOT supported → use **list_dir** (see §5). `shell` (`cat`) is a last-resort fallback |
-| `write` | **apply_patch** (create / update) | No standalone overwrite-write tool: create via `*** Add File`, overwrite via `*** Update File` (full V4A diff). Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §5) |
+| `read` | **read_file** tool | Reads a single file's content. **Deviation**: directory reads NOT supported → use **list_dir** (see §6). `shell` (`cat`) is a last-resort fallback |
+| `write` | **apply_patch** (create / update) | No standalone overwrite-write tool: create via `*** Add File`, overwrite via `*** Update File` (full V4A diff). Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §6) |
 | `edit` | **apply_patch** (update, V4A diff format) | The `*** Update File` hunk must match uniquely; an ambiguous hunk fails → narrow the context. Equivalent to the contract's unique-match rule |
 | `glob` | **glob_file_search** tool | Native glob file search (e.g. `specs/<slug>/*`); on older builds fall back to `shell` + `find`/`ls` |
 | `grep` | **rg** tool | Native ripgrep tool; on older builds fall back to `shell` + `rg`/`grep -rn` |

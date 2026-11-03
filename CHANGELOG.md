@@ -5,6 +5,14 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.3 — 2026-11-03
+
+Post-release audit pass: stale section cross-references from the v2.2.0 renumbering.
+
+### Fixed
+
+- Adapter cross-references pointed at the wrong section after the v2.2.0 renumbering (which deleted the old §4 conditional-skill tables and shifted everything up): `opencode.md` said `see §6` four times where the target content lives in §7 Known Deviations (directory browsing via `tool.list`, read-before-overwrite, `ask_user` serial batch, subagent built-in tools only), and `codex.md` said `see §5` twice where the target lives in §6 Known Deviations (directory reads via `list_dir`, read-before-overwrite). `claude-code.md` was already correct. All six pointers now resolve to the Known Deviations section; `version: 2.2.3`
+
 ## v2.2.2 — 2026-11-03
 
 Post-deployment audit pass: probe dedup + doc sync.
