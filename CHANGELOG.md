@@ -5,6 +5,20 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.1 — 2026-11-03
+
+Clarification-gate conditional skill wired in; deployment drift eliminated via junctions.
+
+### Added
+
+- Companion skill `grill-me` v1.0.0 (installed in `~/.agents/skills`): sharp-question **technique library** for the clarification gate — owns *how to ask* (decision-forcing, bounded questions with declared landing spots; ≤ 7 per batch; assumptions listed for veto), while the gate (SKILL.md §2) keeps *filtering* (assumption vs question) and *collection* (one round, answers → AC/AD)
+- SKILL.md §2: clarification gate may delegate question drafting to a question-technique skill found via `find_skill`; §7 static fallback gains a `grill-me` row (clarification gate, 🟡/🔴 scope fuzzy); `version: 2.2.1`
+
+### Fixed (deployment, outside the repo)
+
+- Skill-library drift root-caused: `~/.claude/skills` is now a junction → `~/.agents/skills`, and `~/.agents/skills/harness-coding` is a junction → this git repo — single source of truth, both hosts always see the repo version (old v1.0.0/v2.1.0 copies kept as backups outside the library: `~/.claude/skills.bak-v1.0.0-20261103`, `~/.agents/skills-backups/`)
+- `find-skill.py` probe re-verified post-fix: no drift warning, both hosts resolve `harness-coding` v2.2.x
+
 ## v2.2.0 — 2026-11-03
 
 Skill-loading architecture: **context-first resolution**. The optional capabilities `find_skill` / `web_search` become semantic anchors resolved against the live conversation context; adapters no longer carry any skill-loading logic.

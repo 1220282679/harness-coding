@@ -1,6 +1,6 @@
 ---
 name: harness-coding
-version: 2.2.0
+version: 2.2.1
 license: MIT
 description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
 ---
@@ -29,7 +29,7 @@ Record one line per verdict: `<verdict> — verb: <…>; noun: <…>; deliverabl
 | 📋 findings-only | spec/plan **IS the deliverable** | locate → review/validate | validation verdict |
 
 - Hard constraints: 🟢 zero new files; 🔴 three artifacts; **AC only added, never rewritten** (supersede to re-point, §12 of the design doc)
-- Clarification gate (🟡/🔴, scope fuzzy): split unclear points into **Assumptions** (low-risk, self-decided, recorded as A-ids) vs **Questions** (batch via `ask_user`, one round — never serial across turns); answers become AC/AD entries. Info-gathering first: `find_skill` (local skills) / `web_search` (external facts; cite source + time; AC stays locally executable)
+- Clarification gate (🟡/🔴, scope fuzzy): split unclear points into **Assumptions** (low-risk, self-decided, recorded as A-ids) vs **Questions** (batch via `ask_user`, one round — never serial across turns); answers become AC/AD entries. Question drafting may delegate to a question-technique skill (e.g. `grill-me`) found via `find_skill` — the gate keeps filtering and one-round discipline. Info-gathering first: `find_skill` (local skills) / `web_search` (external facts; cite source + time; AC stays locally executable)
 - Close-out re-verification (🟡/🔴): full gates re-run before closing — per-task green ≠ repo green; failure → back to the task loop. Merge decision (PR / merge / iterate) via `ask_user` at close-out
 - Continuation: slug comes from the first requirement; follow-ups append tasks by default (🟡: append intent paragraphs); channel upgrade backfills missing artifacts, never downgrades; explicit "new task" or unrelated topic → new slug; existing dir outside this chain → reject and rename
 
@@ -62,7 +62,7 @@ The closing reply is derived from artifacts + diff — never from memory: requir
 
 - `web_search`: cite source + retrieval time; AC stays locally executable; if the repo can answer, do not search. No tool available → record `not verified online` in spec Assumptions
 - `find_skill` (🟡/🔴, scope fuzzy; after classification, before drafting): prefer the native skill mechanism; else `python scripts/find-skill.py "<query>"` probes the standard library locations (`~/.agents/skills` + harness dirs) and flags same-name/version drift. Exit 2 = no library → record `skill library unavailable` in Assumptions
-- Static fallback (no dynamic hit): isolation (after plan) / decision record (after plan) / debugging (after gate failure) / simplify (after gates) / security review (before close-out re-verify, 🔴) / verification (before close-out) / branch finishing (after close-out)
+- Static fallback (no dynamic hit): question-technique / grill-me (clarification gate, 🟡/🔴 scope fuzzy) / isolation (after plan) / decision record (after plan) / debugging (after gate failure) / simplify (after gates) / security review (before close-out re-verify, 🔴) / verification (before close-out) / branch finishing (after close-out)
 
 ## Constraints
 
