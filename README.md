@@ -22,7 +22,7 @@
 | 🔴 完整 | `specs/<slug>/` 下的 `spec.md` / `plan.md` / `tasks.md` | 信息补给 → spec 草稿 → 澄清门 → plan → 逐任务实现+门禁 → 评审 → 收尾重验 | 收尾回复 + 按需追溯视图 |
 | 📋 仅结论 | spec/plan **即交付物** | 定位 → 评审/校验 | 校验结论 |
 
-- **前置链路**（🟡/🔴，需求模糊时）：信息补给（`find_skill` 本地技能检索 / `web_search` 外部核实）→ 澄清门（模糊点拆成**假设**/A-id 与**问题**/批量一轮反问）→ 产物定稿
+- **前置链路**（🟡/🔴，需求模糊时）：信息补给（`find_skill` 本地技能检索 / `web_search` 外部核实）→ 澄清门（模糊点拆成**假设**/A-id 与**问题**/批量一轮反问，问题清单技法可委托 `grill-me` 条件技能——门只管筛和收，技能管怎么问得狠）→ 产物定稿
 - **收尾重验**（🟡/🔴）：逐任务绿 ≠ 全仓绿；收尾前强制全量门禁重跑；合并决策（PR / 直接合并 / 继续迭代）并入收尾 ask_user
 - **多轮续接**：slug 由首个需求生成；后续消息默认追加任务（🟡 = 追加意图段）；通道升级补齐产物、绝不降级；**AC 只增不改**（确需修改用 supersede 标注重指向）
 
@@ -55,7 +55,7 @@ lint → format → type → test
 
 ```
 harness-coding/
-├── SKILL.md                        # 方法论主体（v2：68 行）
+├── SKILL.md                        # 方法论主体（v2）
 ├── SDD-REFACTOR-DESIGN.md          # v2 重构设计文档（已冻结）
 ├── references/
 │   ├── capability-contract.md      # 能力契约（7 必需 + 5 可选）
@@ -64,7 +64,7 @@ harness-coding/
 ├── scripts/
 │   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫 / Gate N/A 配对）
 │   ├── derive-report.py            # 按需追溯视图（merge-base 基线，stdout，永不落盘）
-│   └── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警）
+│   └── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警 + junction 同源去重）
 └── fixtures/                       # 产物校验用例 5 个（含故意损坏的 broken、合法豁免的 gate-na）+ 探针自检用例 3 个
 ```
 

@@ -1,6 +1,6 @@
 ---
 name: harness-coding
-version: 2.2.1
+version: 2.2.2
 license: MIT
 description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
 ---
@@ -62,7 +62,7 @@ The closing reply is derived from artifacts + diff — never from memory: requir
 
 - `web_search`: cite source + retrieval time; AC stays locally executable; if the repo can answer, do not search. No tool available → record `not verified online` in spec Assumptions
 - `find_skill` (🟡/🔴, scope fuzzy; after classification, before drafting): prefer the native skill mechanism; else `python scripts/find-skill.py "<query>"` probes the standard library locations (`~/.agents/skills` + harness dirs) and flags same-name/version drift. Exit 2 = no library → record `skill library unavailable` in Assumptions
-- Static fallback (no dynamic hit): question-technique / grill-me (clarification gate, 🟡/🔴 scope fuzzy) / isolation (after plan) / decision record (after plan) / debugging (after gate failure) / simplify (after gates) / security review (before close-out re-verify, 🔴) / verification (before close-out) / branch finishing (after close-out)
+- Static fallback (no dynamic hit): question-technique, e.g. grill-me (clarification gate, 🟡/🔴 scope fuzzy) / isolation (after plan) / decision record (after plan) / debugging (after gate failure) / simplify (after gates) / security review (before close-out re-verify, 🔴) / verification (before close-out) / branch finishing (after close-out)
 
 ## Constraints
 

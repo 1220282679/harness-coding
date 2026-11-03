@@ -76,14 +76,20 @@ def scan_roots(roots):
     """Scan roots -> (library: {name: [entry]}, locations_seen: int).
 
     entry = {name, version, description, root, path}.
+    Copies resolving to the same real path (junction/symlink aliases of one
+    physical library) are counted once -- the first root in order wins.
     """
-    library, locations_seen = {}, 0
+    library, locations_seen, seen_real = {}, 0, set()
     for root in roots:
         root = Path(root).expanduser()
         if not root.is_dir():
             continue
         locations_seen += 1
         for skill_md in sorted(root.glob("*/SKILL.md")):
+            real = skill_md.resolve()
+            if real in seen_real:
+                continue
+            seen_real.add(real)
             fields = parse_skill(skill_md)
             if not fields:
                 continue

@@ -5,6 +5,16 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.2 — 2026-11-03
+
+Post-deployment audit pass: probe dedup + doc sync.
+
+### Fixed
+
+- `find-skill.py`: copies resolving to the same real path (junction/symlink aliases of one physical library, the now-recommended deployment) are counted once — previously every skill was listed twice and drift logic saw phantom duplicate roots. Drift detection across genuinely distinct directories is unchanged
+- README: clarification gate now mentions the `grill-me` conditional-skill delegation (§2 parity); dropped the fragile SKILL.md line-count annotation; probe description notes dedup
+- SKILL.md §7 static fallback wording aligned with sibling entries; `version: 2.2.2`
+
 ## v2.2.1 — 2026-11-03
 
 Clarification-gate conditional skill wired in; deployment drift eliminated via junctions.
