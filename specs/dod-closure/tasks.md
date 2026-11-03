@@ -7,6 +7,10 @@
 - [x] T5 (AC-6): bump SKILL.md to 2.2.4 and add CHANGELOG entry; Output: SKILL.md `version: 2.2.4`; CHANGELOG v2.2.4 entry with Added / Left open / Changed sections
 - [x] T6 (AC-6): close-out re-verification (full fixture suites) + derive-report view; Output: both suites re-run green (6/6 + 3/3) and `artifact-check.py specs/` → PASS on specs\dod-closure; `derive-report.py specs/dod-closure --base HEAD` derived the traceable view to stdout; GATE-NA(type) / GATE-NA(test) declared chain-wide (test slot fulfilled by the fixture suites); git status shows no report file
 
+- [x] T7 (AC-7): normalize the exemption declaration to a `## Gate Exemptions` heading in the spec template and the gate-na fixture; Output: references/templates/spec.md and fixtures/gate-na/specs/gate-na/spec.md now use `## Gate Exemptions`; grep confirms capability-contract §3 + 3 adapters + intent template + SKILL.md §4 all reference the same name
+- [x] T8 (AC-8): align the README fixture-count comment with the runner's actual output; Output: comment now reads "5 个产物用例全部符合预期（broken 预期报错；输出计数 6 = 5 用例 + 1 个跳过的探针目录）"; runner output "PASS fixtures: 6 cases matched expectations"
+- [x] T9 (AC-9, AC-10): check the §10 multi-turn item (10/10), bump to 2.2.5, CHANGELOG, close-out re-verify; Output: §10 multi-turn item checked with this append as evidence; SKILL.md `version: 2.2.5`; CHANGELOG v2.2.5 entry; close-out: `artifact-check.py --fixtures fixtures` → 6 cases matched, `find-skill.py --fixtures fixtures/skills` → 3 PASS, `artifact-check.py specs/` → PASS; GATE-NA(lint) / GATE-NA(format) / GATE-NA(type) / GATE-NA(test) declared chain-wide in spec (test slot fulfilled by the fixture suites)
+
 ## Deferred
 - [ ] D1: multi-turn continuation drill (same-slug task append + channel-upgrade backfill, §12) — trigger: the first real follow-up requirement landing on an existing chain; suggested follow-up: run it then and check the §10 item
 

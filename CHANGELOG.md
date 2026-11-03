@@ -5,6 +5,20 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.5 — 2026-11-03
+
+First same-chain continuation (§12 drill completed) + Gate N/A declaration-site normalization.
+
+### Fixed
+
+- **Gate N/A declaration-site drift**: the spec template and the gate-na fixture declared exemptions under an inline `Gate exemptions:` label, while capability-contract §3, all three adapters, the intent template, and SKILL.md §4 all reference a `## Gate Exemptions` section — a template-vs-docs naming drift introduced when v2.0.2 added the exemption protocol. Both now use the `## Gate Exemptions` heading; validation is unaffected (artifact-check full-text scans the spec), but copied-from-template artifacts now match the documented shape
+- README verification comment: the fixtures run prints "6 cases matched expectations" (5 artifact cases + 1 skipped probe dir); the comment now says so instead of the stale "5 用例"
+
+### Changed
+
+- §10 of SDD-REFACTOR-DESIGN.md: the multi-turn chain drill item is now checked — this release is itself the first real same-slug continuation of `specs/dod-closure` (follow-up "check the skill again" appended as T7–T9 with AC-7–AC-10, append-only + one supersede annotation). §10 stands at 10/10
+- SKILL.md `version: 2.2.5`
+
 ## v2.2.4 — 2026-11-03
 
 DoD closure: the §10 acceptance checklist of SDD-REFACTOR-DESIGN.md is finally discharged — with the closure itself run as the project's first in-repo 🔴 dogfood drill.

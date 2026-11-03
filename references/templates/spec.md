@@ -11,7 +11,7 @@ Assumptions:
 <!-- low-risk self-decided parts of fuzzy scope (§5.3 clarification-gate output); web_search conclusions must cite source + retrieval time -->
 - A1: <decision + rationale>
 
-Gate exemptions:
+## Gate Exemptions
 <!-- a non-applicable gate must be declared here with a reason + scope, never skipped silently (contract §3 Gate N/A protocol); tasks reference it via GATE-NA(<gate>):, artifact-check enforces the pairing -->
 <!-- example (placeholder form, not treated as a declaration): - GATE-NA(<gate>): <reason> -->
 

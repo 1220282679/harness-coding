@@ -9,7 +9,7 @@ Acceptance criteria:
 Assumptions:
 - A1: the migration script is idempotent (IF NOT EXISTS), rationale: project migration convention
 
-Gate exemptions:
+## Gate Exemptions
 - GATE-NA(type): SQL-only migration change; the project has no applicable static type checking (chain-wide for this task chain)
 - GATE-NA(format): SQL files are out of ruff format's scope; the project has no sqlfluff configured (chain-wide for this task chain)
 

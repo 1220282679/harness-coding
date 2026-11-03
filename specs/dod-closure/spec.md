@@ -10,12 +10,17 @@ Acceptance criteria:
 - AC-3: SKILL.md ≤ 80 lines, and `grep -rn write_report` over SKILL.md / references/ / scripts/ / fixtures/ has 0 hits
 - AC-4: SDD-REFACTOR-DESIGN.md §10 items carry checkmarks + dated evidence; frontmatter status reflects implemented + accepted
 - AC-5: README verification block includes the probe self-test command, added with zero new files
-- AC-6: SKILL.md `version: 2.2.4` + CHANGELOG entry; both fixture suites re-run green at close-out
+- AC-6: SKILL.md `version: 2.2.4` + CHANGELOG entry; both fixture suites re-run green at close-out <!-- satisfied at the 2026-11-03 first close-out; superseded for later releases by AC-10 -->
+- AC-7: spec template and gate-na fixture declare exemptions under a `## Gate Exemptions` heading (matching capability-contract §3, the three adapters, and the intent template); artifact-check fixtures stay green
+- AC-8: README fixture-count comment matches the runner's actual output semantics (5 artifact cases + 1 skipped probe dir = "6 cases matched")
+- AC-9: SDD-REFACTOR-DESIGN.md §10 multi-turn item checked with this append as real evidence — §10 stands at 10/10
+- AC-10: SKILL.md `version: 2.2.5` + CHANGELOG entry; both fixture suites re-run green at this close-out
 
 Assumptions:
 - A1: drill artifacts under `specs/dod-closure/` are committed to the repo as the first real 🔴 sample (user-confirmed 2026-11-03)
 - A2: the multi-turn continuation drill stays open honestly — no synthetic simulation (user-confirmed 2026-11-03); recorded in CHANGELOG
 - A3: the release commit is pushed to origin after close-out (user-confirmed 2026-11-03)
+- A4: the follow-up "check the skill again" request (2026-11-03) is a same-chain requirement per §12 (topic continuous with the DoD closure) → appended here as new tasks, not a new slug; its release follows A3 (commit + push)
 
 Non-goals: no methodology changes; no script code changes; no migration of historical artifacts.
 
