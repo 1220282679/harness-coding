@@ -11,6 +11,10 @@
 - [x] T8 (AC-8): align the README fixture-count comment with the runner's actual output; Output: comment now reads "5 个产物用例全部符合预期（broken 预期报错；输出计数 6 = 5 用例 + 1 个跳过的探针目录）"; runner output "PASS fixtures: 6 cases matched expectations"
 - [x] T9 (AC-9, AC-10): check the §10 multi-turn item (10/10), bump to 2.2.5, CHANGELOG, close-out re-verify; Output: §10 multi-turn item checked with this append as evidence; SKILL.md `version: 2.2.5`; CHANGELOG v2.2.5 entry; close-out: `artifact-check.py --fixtures fixtures` → 6 cases matched, `find-skill.py --fixtures fixtures/skills` → 3 PASS, `artifact-check.py specs/` → PASS; GATE-NA(lint) / GATE-NA(format) / GATE-NA(type) / GATE-NA(test) declared chain-wide in spec (test slot fulfilled by the fixture suites)
 
+- [x] T10 (AC-11): trim the SKILL.md L0 description to ≤80 words, keeping trigger vocabulary; Output: 105 words → 76 words (`sed -n 5p SKILL.md | wc -w` minus the `description:` key); all trigger terms retained (feature/fix/refactor/code review/schema change/changes files on disk, harness-agnostic, proactive, ask-when-uncertain)
+- [x] T11 (AC-12): reference the output-contract template from SKILL.md §6; Output: §6 now carries "Reply contract: `references/templates/output-contract.md` (per-channel depth + gate-evidence format)"; SKILL.md still 72 lines (inline addition, no new lines)
+- [x] T12 (AC-13): bump to 2.2.6, CHANGELOG, close-out re-verify; Output: SKILL.md `version: 2.2.6`; CHANGELOG v2.2.6 entry; close-out: `artifact-check.py --fixtures fixtures` → 6 cases matched, `find-skill.py --fixtures fixtures/skills` → 3 PASS, `artifact-check.py specs/` → PASS; GATE-NA(lint) / GATE-NA(format) / GATE-NA(type) / GATE-NA(test) declared chain-wide in spec (test slot fulfilled by the fixture suites)
+
 ## Deferred
 - [ ] D1: multi-turn continuation drill (same-slug task append + channel-upgrade backfill, §12) — trigger: the first real follow-up requirement landing on an existing chain; suggested follow-up: run it then and check the §10 item
 

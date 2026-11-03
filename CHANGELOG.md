@@ -5,6 +5,20 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.6 — 2026-11-03
+
+Full-sweep fixes: layered-loading budget compliance + orphaned L3 template.
+
+### Fixed
+
+- **L0 budget violation**: SKILL.md frontmatter description had grown to 105 words across v2.2.x (grill-me wiring, context-first wording), exceeding the §11.1 L0 budget (≤80 words, resident in every session). Trimmed to 76 words with the trigger vocabulary fully preserved (feature/fix/refactor/code review/schema change/changes files on disk, harness-agnostic, proactive trigger, ask-when-uncertain)
+- **Orphaned L3 template**: `references/templates/output-contract.md` (the close-out reply contract) was referenced by nothing — unreachable under the layered-loading protocol, which requires upper layers to point to lower ones by path. SKILL.md §6 now carries the reference (per-channel depth + gate-evidence format)
+- SDD-REFACTOR-DESIGN.md §10: L0–L3 evidence annotation updated with the word-budget re-check result
+
+### Changed
+
+- SKILL.md `version: 2.2.6`
+
 ## v2.2.5 — 2026-11-03
 
 First same-chain continuation (§12 drill completed) + Gate N/A declaration-site normalization.

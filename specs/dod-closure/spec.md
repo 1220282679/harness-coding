@@ -14,7 +14,10 @@ Acceptance criteria:
 - AC-7: spec template and gate-na fixture declare exemptions under a `## Gate Exemptions` heading (matching capability-contract §3, the three adapters, and the intent template); artifact-check fixtures stay green
 - AC-8: README fixture-count comment matches the runner's actual output semantics (5 artifact cases + 1 skipped probe dir = "6 cases matched")
 - AC-9: SDD-REFACTOR-DESIGN.md §10 multi-turn item checked with this append as real evidence — §10 stands at 10/10
-- AC-10: SKILL.md `version: 2.2.5` + CHANGELOG entry; both fixture suites re-run green at this close-out
+- AC-10: SKILL.md `version: 2.2.5` + CHANGELOG entry; both fixture suites re-run green at this close-out <!-- satisfied at the v2.2.5 close-out; superseded for later releases by AC-13 -->
+- AC-11: SKILL.md L0 description ≤ 80 words (design §11.1 L0 budget), preserving the trigger vocabulary (feature/fix/refactor/code review/schema change/changes files on disk)
+- AC-12: `references/templates/output-contract.md` is referenced from SKILL.md §6 (close-out) so the L3 reply contract is discoverable per the layered-loading protocol
+- AC-13: SKILL.md `version: 2.2.6` + CHANGELOG entry; both fixture suites re-run green at this close-out
 
 Assumptions:
 - A1: drill artifacts under `specs/dod-closure/` are committed to the repo as the first real 🔴 sample (user-confirmed 2026-11-03)

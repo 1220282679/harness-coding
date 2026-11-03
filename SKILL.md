@@ -1,8 +1,8 @@
 ---
 name: harness-coding
-version: 2.2.5
+version: 2.2.6
 license: MIT
-description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
+description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify intent, pick a channel (light/standard/full/findings-only), clarify fuzzy scope, dispatch roles (explorer/implementer/reviewer), enforce quality gates, and close out with a traceable summary derived from markdown artifacts (spec/plan/tasks) — no report files. Harness-agnostic; trigger proactively; ask before deciding when uncertain.
 ---
 
 # harness-coding — Artifact-Driven Coding Orchestrator (v2)
@@ -54,7 +54,7 @@ Templates: `references/templates/{spec,plan,tasks,intent}.md`. Checked tasks mus
 
 ## 6. Close-out
 
-The closing reply is derived from artifacts + diff — never from memory: requirement positioning / verification evidence / remaining risks (open Deferred). On-demand view: `python scripts/derive-report.py specs/<slug> [--base <ref>]` (stdout, never persisted; **no report file is ever written**).
+The closing reply is derived from artifacts + diff — never from memory: requirement positioning / verification evidence / remaining risks (open Deferred). Reply contract: `references/templates/output-contract.md` (per-channel depth + gate-evidence format). On-demand view: `python scripts/derive-report.py specs/<slug> [--base <ref>]` (stdout, never persisted; **no report file is ever written**).
 
 ## 7. Optional Capabilities: Context-First Resolution
 
