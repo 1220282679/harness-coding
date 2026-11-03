@@ -1,6 +1,6 @@
 ---
 name: harness-coding
-version: 2.1.0
+version: 2.2.0
 license: MIT
 description: Turn a one-line coding request into a controlled change flow. Use when the user asks for a new feature, a fix, a refactor, code review, a schema change, or any task that changes files on disk — classify the intent, pick a channel (🟢 light / 🟡 standard / 🔴 full / 📋 findings-only), gather context (local skill search + web verification, optional), clarify fuzzy scope, dispatch roles (explorer / implementer / reviewer), enforce quality gates, and close out with a traceable summary derived from plain markdown artifacts (spec/intent/plan/tasks) — no report files. Harness-agnostic; trigger proactively even if "harness" is never mentioned; if uncertain, ask before deciding.
 ---
@@ -56,9 +56,11 @@ Templates: `references/templates/{spec,plan,tasks,intent}.md`. Checked tasks mus
 
 The closing reply is derived from artifacts + diff — never from memory: requirement positioning / verification evidence / remaining risks (open Deferred). On-demand view: `python scripts/derive-report.py specs/<slug> [--base <ref>]` (stdout, never persisted; **no report file is ever written**).
 
-## 7. Conditional Skills
+## 7. Conditional Skills (context-first)
 
-Dynamic: `find_skill` searches the local skill library after classification (optional). Static fallback: the adapter's §4 mapping table (isolation / decision-record / debugging / simplify / security review / verification / branch-finishing).
+Optional capabilities resolve against the tools **actually present in the current conversation context**: prefer the host's native skill/search mechanism — adapters carry hints only, and live context wins over a hint (record the deviation). Loading uses the native mechanism. Optional probe: `python scripts/find-skill.py "<query>"` adds cross-location discovery + same-name version-drift warnings. Trigger: after classification, before drafting, scope-fuzzy 🟡/🔴 only.
+
+Static fallback (no native mechanism / no hit): stage → skill type — post-plan: isolation (`using-git-worktrees`) + decision-record (ADRs); gate failure: debugging (`systematic-debugging`); gate pass pre-review: simplify; pre-close-out: security review (🔴) + verification; post-close-out: branch-finishing. Skill-library drift (same name, different versions across locations) → fix the copies, never silently pick one.
 
 ## Constraints
 

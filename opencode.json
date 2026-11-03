@@ -3,6 +3,7 @@
     "bash": {
       "python scripts/artifact-check.py*": "allow",
       "python scripts/derive-report.py*": "allow",
+      "python scripts/find-skill.py*": "allow",
       "echo exit*": "allow"
     }
   }

@@ -1,6 +1,6 @@
 ---
 name: harness-coding-adapter-claude-code
-description: The filled-in adapter layer for the Claude Code harness (v2). Maps the 7 required + 5 optional capabilities from references/capability-contract.md to Claude Code's concrete tools (Read / Write / Edit / Glob / Grep / Bash / AskUserQuestion / Agent / EnterWorktree / WebSearch), and declares quality-gate commands, role mapping, and the static conditional-skill mapping. Read before loading harness-coding under Claude Code (SKILL.md prerequisites).
+description: The filled-in adapter layer for the Claude Code harness (v2). Maps the required + harness-mappable optional capabilities from references/capability-contract.md to Claude Code's concrete tools (Read / Write / Edit / Glob / Grep / Bash / AskUserQuestion / Agent / EnterWorktree / WebSearch), and declares quality-gate commands and role mapping. Skill loading resolves context-first per SKILL.md §7 — no adapter content for it. Read before loading harness-coding under Claude Code (SKILL.md prerequisites).
 ---
 
 # Adapter Layer: Claude Code
@@ -11,7 +11,7 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 
 ## 1. Capability Mapping Table
 
-> All 12 capabilities (7 required + 5 optional) map to Claude Code primitives as follows. Anything that can't be mapped is marked "unsupported" honestly — never invented.
+> The 7 required capabilities + the 4 harness-mappable optional ones map to Claude Code primitives as follows (`find_skill` resolves context-first — no mapping row, see SKILL.md §7). Anything that can't be mapped is marked "unsupported" honestly — never invented.
 
 | Capability | Implementation in Claude Code | Notes |
 |------------|-------------------------------|-------|
@@ -25,7 +25,6 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 | `spawn_agent` | **Agent** tool (optional) | role mapping in §3 |
 | `create_branch` | **EnterWorktree** tool, else `git checkout -b` via Bash (optional) | worktree isolation; fallback to a feature branch |
 | `check_command` | Bash `command -v <cmd>` (optional) | run once to decide |
-| `find_skill` | **Glob** over `.claude/skills/*/SKILL.md` + `~/.claude/skills/*/SKILL.md`, then **Read** each frontmatter `description` to match the query (optional) | a hit is loaded as a conditional skill (§4); no search primitive needed — glob + frontmatter read satisfies the semantics |
 | `web_search` | **WebSearch** tool, **WebFetch** for detail pages (optional) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |
 
 ## 2. Quality-Gate Commands (project-defined)
@@ -52,21 +51,7 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 
 > If an agent type is not registered → degrade to the generic agent or inline execution; responsibilities and output contracts stay unchanged.
 
-## 4. Conditional Skill Mapping (static fallback for `find_skill`)
-
-> When `find_skill` is unavailable or returns no hit, fall back to this static table.
-
-| Abstract conditional skill | Loadable skill in Claude Code | Triggered stage |
-|---------------------------|-------------------------------|-----------------|
-| Isolation skill | `using-git-worktrees` (or **EnterWorktree** directly) | after plan confirmed → before implementation |
-| Decision-record skill | `documentation-and-adrs` | after plan confirmed |
-| Debugging skill | `systematic-debugging` | after quality-gate failure |
-| Simplify skill | `simplify` | after quality-gate pass → before review |
-| Security review | `security-review` | after review pass → before close-out re-verification (🔴) |
-| Verification skill | `verification-before-completion` | after review pass → before close-out |
-| Branch-finishing skill | `finishing-a-development-branch` | after close-out pass |
-
-## 5. Degradation Rule Declarations
+## 4. Degradation Rule Declarations
 
 | Missing capability | Degradation behavior in Claude Code | Annotation |
 |--------------------|-------------------------------------|------------|
@@ -74,11 +59,11 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 | `spawn_agent` | the orchestrator executes roles inline | `no sub-agent, inline execution` |
 | `create_branch` | change directly on the main workspace | `not isolated (no branch capability)` |
 | `check_command` | run once via Bash | none |
-| `find_skill` | static conditional-skill table (§4) | none |
+| `find_skill` | static conditional-skill table (SKILL.md §7) + `find-skill.py` drift warning | none |
 | `web_search` | record `not verified online` in spec Assumptions | none |
 | Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
 
-## 6. Capability-Contract Consistency Self-Check
+## 5. Capability-Contract Consistency Self-Check
 
 | Required capability | Implementation in Claude Code | Status |
 |---------------------|-------------------------------|--------|
@@ -86,7 +71,7 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 | run_command | §1 table (Bash) | ☑ |
 | ask_user | §1 table (AskUserQuestion, batch native) | ☑ |
 
-## 7. Known Deviations
+## 6. Known Deviations
 
 | Contract semantics | Claude Code reality | Handling |
 |--------------------|--------------------|----------|

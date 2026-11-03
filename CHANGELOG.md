@@ -1,9 +1,34 @@
 ---
 name: harness-coding-changelog
-description: Release history for the harness-coding skill. Covers the v2 artifact-driven rewrite (SDD), the dispatch-protocol hardening, and the quality-gate scenario-adaptation pass (Gate N/A, incremental gates, coverage source, characterization baseline).
+description: Release history for the harness-coding skill. Covers the v2 artifact-driven rewrite (SDD), the dispatch-protocol hardening, the quality-gate scenario-adaptation pass (Gate N/A, incremental gates, coverage source, characterization baseline), the English pass, and the context-first skill-resolution refactor.
 ---
 
 # Changelog
+
+## v2.2.0 — 2026-11-03
+
+**Context-first skill resolution** — skill loading is no longer adapter content; optional capabilities resolve against the tools actually present in the live conversation context. Structural change for custom adapters.
+
+### Added
+
+- **Context-first resolution rule** (contract sec 2 + SKILL.md sec 7): capability names are semantic anchors; the host's native skill/search mechanism first; adapter mappings are hints and live context wins over a hint (record the deviation)
+- `scripts/find-skill.py` (~110 lines, stdlib-only): cross-location skill discovery + **same-name version-drift warnings** (exit 1 on drift) — the only mechanism that can catch a stale duplicate copy no single host sees; also distinguishes **library-missing** (environment condition, recorded) from a normal no-match
+- Permission allowlists (`settings.json` / `opencode.json`) cover the new probe
+
+### Changed
+
+- **Static conditional-skill table moved from every adapter sec 4 to SKILL.md sec 7** — three identical copies collapsed into one; trigger stages map to skill types, resolution via the native mechanism
+- Adapters slimmed: `find_skill` mapping rows and sec 4 removed from claude-code / codex / opencode / template; sections renumbered; adapters now carry only harness-specific content (capability mappings, gate commands, roles, web_search setup notes)
+- Contract `find_skill` semantics and degradation rewritten: fallback points to SKILL.md sec 7; **missing library ≠ no match** (the first is an environment condition to record, the second is normal)
+
+### Migration (custom adapters)
+
+- An adapter written against the old template has its sec 4 orphaned: fold any harness-specific conditional-skill entries into the defaults in SKILL.md sec 7, or keep them as a local override section — the methodology reads SKILL.md sec 7 as the fallback either way
+- `web_search` rows stay in adapters: they carry genuine harness-specific setup notes (Codex config flag, opencode MCP plugin)
+
+### Rationale
+
+Adapters were the only place in the project referencing machine-local state (filesystem skill-library paths) instead of stable interfaces — the same skill library installed at `~/.claude/skills` (stale v1.0.0) and `~/.agents/skills` (current) drifted silently, and neither the adapter docs nor the native loaders noticed. Skill loading now follows the project axiom: the host owns the mechanics, the methodology owns the disciplines, and drift gets a probe that fails loudly.
 
 ## v2.1.0 — 2026-10-24
 

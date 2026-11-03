@@ -1,6 +1,6 @@
 ---
 name: harness-coding-adapter-template
-description: The generic adapter template for harness-coding (v2). When onboarding a new harness, copy this file to references/adapters/<harness>.md and fill in section by section, mapping the 12 capabilities from the capability contract (7 required + 5 optional) to the current harness's concrete tools/primitives, and declaring quality-gate commands, role mapping, the static conditional-skill mapping, and degradation rules. Read before loading harness-coding (SKILL.md prerequisites).
+description: The generic adapter template for harness-coding (v2). When onboarding a new harness, copy this file to references/adapters/<harness>.md and fill in section by section, mapping the capabilities from the capability contract (7 required + optional; find_skill resolves context-first — no mapping row, see SKILL.md §7) to the current harness's concrete tools/primitives, and declaring quality-gate commands, role mapping, and degradation rules. Read before loading harness-coding (SKILL.md prerequisites).
 ---
 
 # Adapter Template (for filling in)
@@ -15,12 +15,12 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 
 1. Copy this file to `references/adapters/<harness>.md` (the filename identifies the harness)
 2. Replace the placeholder content section by section (every "fill-in" cell), then delete this section
-3. Self-check against §6: each of the **7 required capabilities** has an implementation
+3. Self-check against §5: each of the **7 required capabilities** has an implementation
 4. Run one lightweight requirement end-to-end (e.g. fix a typo): the 🟢 channel must complete **without creating any new file**; then run one 🔴 sample to verify artifacts + `artifact-check.py` pass
 
 ## 1. Capability Mapping Table
 
-> Map all 12 capabilities (7 required + 5 optional) one by one; anything that can't be mapped must be honestly marked "unsupported" — never invent one.
+> Map the 7 required capabilities + the harness-mappable optional ones one by one (`find_skill` resolves context-first — no mapping row, see SKILL.md §7); anything that can't be mapped must be honestly marked "unsupported" — never invent one.
 
 | Capability | Implementation in this harness | Notes |
 |------------|--------------------------------|-------|
@@ -34,7 +34,6 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 | `spawn_agent` | fill-in (optional) | if missing, execute inline per the degradation rules |
 | `create_branch` | fill-in (optional) | if missing, mark "not isolated" |
 | `check_command` | fill-in (optional) | if missing, run once to decide |
-| `find_skill` | fill-in (optional) | search local skill packages (glob + frontmatter read is valid); if missing → static table in §4 |
 | `web_search` | fill-in (optional) | if missing → record `not verified online` in spec Assumptions |
 
 ## 2. Quality-Gate Commands (defined by the project)
@@ -60,19 +59,7 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 
 > If not registered → degrade to a generic subagent or inline execution in the orchestrator; responsibilities and output contracts stay unchanged.
 
-## 4. Conditional Skill Mapping (static fallback for `find_skill`)
-
-| Abstract conditional skill | Loadable skill in this harness | Triggered stage |
-|---------------------------|--------------------------------|-----------------|
-| Isolation skill | fill-in | after plan confirmed → before implementation |
-| Decision-record skill | fill-in | after plan confirmed |
-| Debugging skill | fill-in | after quality-gate failure |
-| Simplify skill | fill-in | after quality-gate pass → before review |
-| Security review | fill-in | after review pass → before close-out re-verification (🔴) |
-| Verification skill | fill-in | after review pass → before close-out |
-| Branch-finishing skill | fill-in | after close-out pass |
-
-## 5. Degradation Rule Declarations
+## 4. Degradation Rule Declarations
 
 | Missing capability | Degradation behavior in this harness | Annotation |
 |--------------------|--------------------------------------|------------|
@@ -80,11 +67,11 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 | `spawn_agent` | fill-in | no sub-agent, inline execution |
 | `create_branch` | fill-in | not isolated (no branch capability) |
 | `check_command` | fill-in | none |
-| `find_skill` | fill-in — static conditional-skill table (§4) | none |
+| `find_skill` | static conditional-skill table (SKILL.md §7) + `find-skill.py` drift warning | none |
 | `web_search` | fill-in — record `not verified online` in spec Assumptions | none |
 | Other (required capability missing) | fill-in | mark "unsupported capabilities" at the top of the adapter layer |
 
-## 6. Capability-Contract Consistency Self-Check
+## 5. Capability-Contract Consistency Self-Check
 
 | Required capability | Implementation in this harness | Status |
 |---------------------|--------------------------------|--------|

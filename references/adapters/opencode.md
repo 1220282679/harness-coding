@@ -1,6 +1,6 @@
 ---
 name: harness-coding-adapter-opencode
-description: The filled-in adapter layer for the opencode harness (v2). Maps the 7 required + 5 optional capabilities from references/capability-contract.md to opencode's concrete tools (tool.read / tool.write / tool.edit / tool.apply_patch / tool.bash / tool.grep / tool.glob / tool.list / tool.question / tool.task / tool.skill), and declares quality-gate commands, role mapping, and the static conditional-skill mapping. Read before loading harness-coding under opencode (SKILL.md prerequisites).
+description: The filled-in adapter layer for the opencode harness (v2). Maps the required + harness-mappable optional capabilities from references/capability-contract.md to opencode's concrete tools (tool.read / tool.write / tool.edit / tool.apply_patch / tool.bash / tool.grep / tool.glob / tool.list / tool.question / tool.task / tool.skill), and declares quality-gate commands and role mapping. Skill loading resolves context-first per SKILL.md §7 — no adapter content for it. Read before loading harness-coding under opencode (SKILL.md prerequisites).
 ---
 
 # Adapter Layer: opencode
@@ -13,7 +13,7 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 
 ## 1. Capability Mapping Table
 
-> All 12 capabilities (7 required + 5 optional) map to opencode primitives as follows. Anything that can't be mapped is marked "unsupported" honestly — never invented. Tool names follow opencode's `tool.<name>` convention; per-tool permission (`allow` / `ask` / `deny`) is configured in the harness config (see §6).
+> The 7 required capabilities + the 4 harness-mappable optional ones map to opencode primitives as follows (`find_skill` resolves context-first — no mapping row, see SKILL.md §7). Anything that can't be mapped is marked "unsupported" honestly — never invented. Tool names follow opencode's `tool.<name>` convention; per-tool permission (`allow` / `ask` / `deny`) is configured in the harness config (see §5).
 
 | Capability | Implementation in opencode | Notes |
 |------------|-----------------------------|-------|
@@ -23,11 +23,10 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 | `glob` | **tool.glob** | pattern-match file listing (e.g. `specs/<slug>/*`) |
 | `grep` | **tool.grep** | regex content search, ripgrep-style; matches with file:line |
 | `run_command` | **tool.bash** | The only channel for quality gates. Permission `bash` supports an allow/ask/deny mode plus a command glob-pattern map |
-| `ask_user` | **tool.question** | Asks the user mid-execution. Batch: `tool.question` handles one question per call → serial asks within the same clarification round (see §7). When unavailable (non-interactive run) → degrade per §5 |
+| `ask_user` | **tool.question** | Asks the user mid-execution. Batch: `tool.question` handles one question per call → serial asks within the same clarification round (see §7). When unavailable (non-interactive run) → degrade per §4 |
 | `spawn_agent` | **tool.task** (optional) | Spawns a subagent defined in `.opencode/agents/` (or `~/.config/opencode/agents/`); also invoked via `@<name>` mentions. Subagents can use only built-in tools (see §7) |
 | `create_branch` | **tool.bash** `git checkout -b <name>` (optional) | no native worktree primitive; a worktree = `tool.bash` + `git worktree add` |
 | `check_command` | **tool.bash** `command -v <cmd>` (optional) | run once to decide |
-| `find_skill` | **tool.glob** over `.opencode/skills/*/SKILL.md` + `~/.config/opencode/skills/*/SKILL.md` (+ portable `.claude/skills/` / `.agents/skills/`), then **tool.read** each frontmatter `description` to match; load a hit via **tool.skill** (optional) | restart opencode after adding a skill |
 | `web_search` | No bundled search primitive → via an MCP search plugin if configured, else **tool.bash** + `curl` against an allowed API (optional; verify at setup) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |
 
 ## 2. Quality-Gate Commands (project-defined)
@@ -54,21 +53,7 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 | `implementer` | built-in **`general`** subagent, or a custom agent in `.opencode/agents/` | implementation + tests + gates; checks off tasks with pasted gate output |
 | `reviewer` | a custom read-only reviewer agent (e.g. `.opencode/agents/reviewer.md`, `mode: subagent`, `permission` allows `bash` for gate rechecks), else **`general`** with the reviewer dispatch prompt | graded findings land in the `## Review` section |
 
-## 4. Conditional Skill Mapping (static fallback for `find_skill`)
-
-> opencode loads skills as SKILL.md packages from `.opencode/skills/` (project) and `~/.config/opencode/skills/` (global), and also reads the portable `.claude/skills/` and `.agents/skills/` paths — existing Claude Code skill packages can be reused as-is. Skills are invoked via the **tool.skill** tool. When `find_skill` is unavailable or returns no hit, fall back to this static table.
-
-| Abstract conditional skill | Loadable skill in opencode | Triggered stage |
-|---------------------------|----------------------------|-----------------|
-| Isolation skill | port `using-git-worktrees` → `.opencode/skills/using-git-worktrees/SKILL.md` (or `tool.bash` git worktree) | after plan confirmed → before implementation |
-| Decision-record skill | port `documentation-and-adrs` → `.opencode/skills/documentation-and-adrs/SKILL.md` | after plan confirmed |
-| Debugging skill | port `systematic-debugging` → `.opencode/skills/systematic-debugging/SKILL.md` | after quality-gate failure |
-| Simplify skill | port `simplify` → `.opencode/skills/simplify/SKILL.md` | after quality-gate pass → before review |
-| Security review | port `security-review` → `.opencode/skills/security-review/SKILL.md` | after review pass → before close-out re-verification (🔴) |
-| Verification skill | port `verification-before-completion` → `.opencode/skills/verification-before-completion/SKILL.md` | after review pass → before close-out |
-| Branch-finishing skill | port `finishing-a-development-branch` → `.opencode/skills/finishing-a-development-branch/SKILL.md` | after close-out pass |
-
-## 5. Degradation Rule Declarations
+## 4. Degradation Rule Declarations
 
 | Missing capability | Degradation behavior in opencode | Annotation |
 |--------------------|----------------------------------|------------|
@@ -76,15 +61,15 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 | `spawn_agent` | the orchestrator executes roles inline (also when the `task` permission denies) | `no sub-agent, inline execution` |
 | `create_branch` | change directly on the main workspace (or `tool.bash` git branch) | `not isolated (no branch capability)` |
 | `check_command` | run once via tool.bash | none |
-| `find_skill` | static conditional-skill table (§4) | none |
+| `find_skill` | static conditional-skill table (SKILL.md §7) + `find-skill.py` drift warning | none |
 | `web_search` | record `not verified online` in spec Assumptions | none |
 | Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
 
-## 6. Permission Config for the Validation Scripts
+## 5. Permission Config for the Validation Scripts
 
-> The repo ships an `opencode.json` at the repo root with `permission.bash` allow patterns for `scripts/artifact-check.py` / `scripts/derive-report.py` (plus the `echo exit` exit-code readback) — the opencode equivalent of `.claude/settings.json` under Claude Code. When the skill is installed into a target project, declare the same allow patterns in that project's own config.
+> The repo ships an `opencode.json` at the repo root with `permission.bash` allow patterns for `scripts/artifact-check.py` / `scripts/derive-report.py` / `scripts/find-skill.py` (plus the `echo exit` exit-code readback) — the opencode equivalent of `.claude/settings.json` under Claude Code. When the skill is installed into a target project, declare the same allow patterns in that project's own config.
 
-## 7. Capability-Contract Consistency Self-Check
+## 6. Capability-Contract Consistency Self-Check
 
 | Required capability | Implementation in opencode | Status |
 |---------------------|-----------------------------|--------|
@@ -92,13 +77,13 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 | run_command | §1 table (tool.bash) | ☑ |
 | ask_user | §1 table (tool.question; serial within one clarification round) | ☑ |
 
-## 8. Known Deviations
+## 7. Known Deviations
 
 | Contract semantics | opencode reality | Handling |
 |--------------------|------------------|----------|
 | `read` on a directory returns an entry list | `tool.read` lists directory contents on v1.1.60+; older builds read a single file only | met natively on current builds; older builds fall back to **tool.list** |
 | read-before-overwrite guardrail | not enforced by the harness | the orchestrator must `read` the target before overwriting |
-| `ask_user` batch signature | `tool.question` handles one question per call | serial asks within the same clarification round; when unavailable, degrade per §5 |
+| `ask_user` batch signature | `tool.question` handles one question per call | serial asks within the same clarification round; when unavailable, degrade per §4 |
 | sub-agent environment | subagents can use only built-in tools (MCP tools need a bridge plugin) | the three roles only need built-in tools |
 
 > If a deviation becomes blocking for a required capability, annotate "unsupported capabilities" at the top of this file and continue per the degradation rules — never invent a mapping.
