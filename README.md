@@ -82,6 +82,7 @@ harness-coding/
 
 ```bash
 python scripts/artifact-check.py --fixtures fixtures/   # 5 个用例应全部符合预期（broken 预期报错）
+python scripts/find-skill.py --fixtures fixtures/skills # 探针自测（drift / no-drift / empty）
 python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
 python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）
 ```

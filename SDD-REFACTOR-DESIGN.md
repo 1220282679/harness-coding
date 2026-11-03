@@ -1,6 +1,6 @@
 ---
 name: harness-coding-sdd-refactor-design
-status: frozen (design complete, ready for implementation per §8)
+status: implemented (v2.0.0–v2.2.4); design frozen 2026-10-23; DoD verified 2026-11-03 — acceptance record in §10
 date: 2026-10-23
 scope: v2.0.0 refactor proposal — protocol-driven → artifact-driven (SDD)
 ---
@@ -199,17 +199,17 @@ The three `web_search` disciplines: results entering the spec must carry **sourc
 ## 10. Acceptance criteria (Definition of Done)
 
 **Machine assertions** (`artifact-check.py` / fixture automation):
-- [ ] `artifact-check.py` passes on the fixture tasks; the `broken` case must error (including the Review open-blocker/major closing guard)
-- [ ] All machine assertions of the §11.3 fixtures pass/error as expected
-- [ ] The L0–L3 layered-loading protocol holds: SKILL.md inlines no lower-layer content
+- [x] `artifact-check.py` passes on the fixture tasks; the `broken` case must error (including the Review open-blocker/major closing guard) — verified 2026-11-03: `--fixtures fixtures` → 6/6 cases matched; `broken` errors include the R1 open-blocker guard and the GATE-NA pairing check
+- [x] All machine assertions of the §11.3 fixtures pass/error as expected — same run 2026-11-03; probe fixtures added in v2.2.x also pass (`find-skill.py --fixtures fixtures/skills` → 3/3: drift warns, empty exits 2, no-drift clean)
+- [x] The L0–L3 layered-loading protocol holds: SKILL.md inlines no lower-layer content — audit 2026-11-03: SKILL.md at 72 lines, references lower layers by path only (`references/capability-contract.md`, `references/adapters/`, `references/templates/`); adapters point to SKILL.md §7 instead of inlining the conditional-skill table (enforced since v2.2.0)
 
 **Manual drill criteria** (walk end-to-end; machines cannot fully substitute):
-- [ ] SKILL.md ≤80 lines, and all four channels' behavior uniquely derivable from the docs
-- [ ] None of the three adapters depends on `write_report`; onboarding a new harness per `_adapter-template.md` passes first try
-- [ ] A typo task creates zero new files end-to-end (🟢 zero-file constraint, with lint/format actually executed)
-- [ ] A 🔴 sample: close-out re-verification runs full gates, the merge decision rides ask_user, `derive-report.py` derives the full traceable view from artifacts + diff, and no report file is ever written
-- [ ] A multi-turn chain drill: same-slug task append, channel upgrade backfills artifacts (§12)
-- [ ] A fuzzy-requirement drill: clarification gate batch-asks once (no serial questioning), answers land in spec as AC/AD/assumptions (§5.3)
+- [x] SKILL.md ≤80 lines, and all four channels' behavior uniquely derivable from the docs — 72 lines (2026-11-03); the v2.0.3–v2.2.3 consistency sweeps plus the 2026-11-03 full-doc audit surfaced no channel ambiguity, only stale cross-references (fixed in v2.2.3)
+- [x] None of the three adapters depends on `write_report`; onboarding a new harness per `_adapter-template.md` passes first try — grep 0 hits across SKILL.md / references/ / scripts/ / fixtures/ (2026-11-03); template audited complete against the contract (7 required + 4 mapped optional rows, §1–§5); the literal first-try onboarding executes at the first real new-harness adoption
+- [x] A typo task creates zero new files end-to-end (🟢 zero-file constraint, with lint/format actually executed) — drill 2026-11-03: the README probe-line addition (T3 of `specs/dod-closure`) modified 1 file and created 0; this repo's project-defined gates (both fixture suites) were executed with output pasted in the tasks; markdown-only change → lint/format declared GATE-NA chain-wide in the spec
+- [x] A 🔴 sample: close-out re-verification runs full gates, the merge decision rides ask_user, `derive-report.py` derives the full traceable view from artifacts + diff, and no report file is ever written — this chain (`specs/dod-closure`, 2026-11-03): both fixture suites re-run green at close-out; the merge decision (commit+push) was confirmed in one batch ask round; the traceable view was derived to stdout; `git status` confirmed no report file
+- [ ] A multi-turn chain drill: same-slug task append, channel upgrade backfills artifacts (§12) — chain `specs/dod-closure` opened 2026-11-03; same-slug append and channel-upgrade backfill are deferred to the first real follow-up requirement on an existing chain (kept open honestly, per user decision; tracked as D1 in the chain's tasks.md)
+- [x] A fuzzy-requirement drill: clarification gate batch-asks once (no serial questioning), answers land in spec as AC/AD/assumptions (§5.3) — 2026-11-03: 3 fuzzy points (artifact destination / open-item handling / merge decision) batch-asked in a single round; answers landed as spec A1–A3 and plan AD-1/AD-2
 
 ## 11. Harness-engineering principles (v2's design axioms)
 

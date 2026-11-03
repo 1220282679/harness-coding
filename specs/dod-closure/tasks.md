@@ -1,0 +1,15 @@
+# dod-closure tasks
+
+- [x] T1 (AC-1, AC-2): run both fixture suites and capture gate evidence; Output: `artifact-check.py --fixtures fixtures` → PASS fixtures: 6 cases matched expectations (broken errors as designed); `find-skill.py --fixtures fixtures/skills` → PASS: drift / empty / no-drift (3/3)
+- [x] T2 (AC-3): verify L1 size budget and write_report residue; Output: `wc -l SKILL.md` → 72; `grep -rn write_report SKILL.md references/ scripts/ fixtures/` → 0 hits (exit 1)
+- [x] T3 (AC-5): add probe self-test line to README verification block (🟢 sub-change, zero new files); Output: README verification block now carries `find-skill.py --fixtures fixtures/skills`; 1 file modified, 0 new files (the specs/dod-closure artifacts belong to this 🔴 chain, not the 🟢 sub-change); markdown-only change → GATE-NA(lint) / GATE-NA(format) declared chain-wide in spec
+- [x] T4 (AC-4): check off §10 items with dated evidence; update frontmatter status; Output: §10 → 9/10 checked with 2026-11-03 evidence annotations, multi-turn drill left open per A2; frontmatter status → "implemented (v2.0.0–v2.2.4); design frozen 2026-10-23; DoD verified 2026-11-03"
+- [x] T5 (AC-6): bump SKILL.md to 2.2.4 and add CHANGELOG entry; Output: SKILL.md `version: 2.2.4`; CHANGELOG v2.2.4 entry with Added / Left open / Changed sections
+- [x] T6 (AC-6): close-out re-verification (full fixture suites) + derive-report view; Output: both suites re-run green (6/6 + 3/3) and `artifact-check.py specs/` → PASS on specs\dod-closure; `derive-report.py specs/dod-closure --base HEAD` derived the traceable view to stdout; GATE-NA(type) / GATE-NA(test) declared chain-wide (test slot fulfilled by the fixture suites); git status shows no report file
+
+## Deferred
+- [ ] D1: multi-turn continuation drill (same-slug task append + channel-upgrade backfill, §12) — trigger: the first real follow-up requirement landing on an existing chain; suggested follow-up: run it then and check the §10 item
+
+## Review
+- R1 [resolved]: README verification block lacked the probe self-test command (found in the 2026-11-03 audit) → fixed in T3
+- R2 [open|minor]: the "onboarding passes first try" sub-criterion inside the §10 write_report item cannot be fully exercised without a real second harness — recorded here; converts to Deferred only if it ever blocks

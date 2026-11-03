@@ -5,6 +5,25 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.4 — 2026-11-03
+
+DoD closure: the §10 acceptance checklist of SDD-REFACTOR-DESIGN.md is finally discharged — with the closure itself run as the project's first in-repo 🔴 dogfood drill.
+
+### Added
+
+- §10 acceptance record: 9/10 items checked with dated evidence. Machine assertions re-run green (`artifact-check.py --fixtures fixtures` 6/6; `find-skill.py --fixtures fixtures/skills` 3/3; SKILL.md 72 lines ≤ 80; `write_report` 0 hits). Manual drills covered by this release's own 🔴 chain `specs/dod-closure/`: clarification gate batch-asked once (3 fuzzy points, single round, answers → spec A1–A3 / plan AD-1–AD-2), merge decision rode ask_user, close-out re-verification re-ran both fixture suites, `derive-report.py` view derived to stdout, no report file written
+- `specs/dod-closure/` artifacts committed as the repo's first real 🔴 sample (kept and re-validatable via `artifact-check.py specs/`)
+- README verification block: probe self-test command added (`find-skill.py --fixtures fixtures/skills`)
+
+### Left open (by design)
+
+- §10 multi-turn chain drill (same-slug task append + channel-upgrade backfill, §12): stays unchecked until the first real follow-up requirement lands on an existing chain — honest gap, no synthetic simulation (user-confirmed); tracked as D1 in the chain's Deferred
+
+### Changed
+
+- SDD-REFACTOR-DESIGN.md frontmatter status: frozen → implemented (v2.0.0–v2.2.4); DoD verified 2026-11-03
+- SKILL.md `version: 2.2.4`
+
 ## v2.2.3 — 2026-11-03
 
 Post-release audit pass: stale section cross-references from the v2.2.0 renumbering.
