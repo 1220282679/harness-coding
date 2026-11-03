@@ -1,0 +1,2 @@
+# placeholder: git does not track empty directories; this root exists
+# but contains no skills, so the probe must exit 2 (no usable library).

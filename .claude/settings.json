@@ -3,8 +3,7 @@
     "allow": [
       "Bash(python scripts/artifact-check.py*)",
       "Bash(python scripts/derive-report.py*)",
-      "Bash(python scripts/find-skill.py*)",
-      "Bash(echo exit=$?)"
+      "Bash(python scripts/find-skill.py*)"
     ]
   }
 }

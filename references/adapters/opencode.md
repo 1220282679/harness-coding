@@ -1,6 +1,6 @@
 ---
 name: harness-coding-adapter-opencode
-description: The filled-in adapter layer for the opencode harness (v2). Maps the required + harness-mappable optional capabilities from references/capability-contract.md to opencode's concrete tools (tool.read / tool.write / tool.edit / tool.apply_patch / tool.bash / tool.grep / tool.glob / tool.list / tool.question / tool.task / tool.skill), and declares quality-gate commands and role mapping. Skill loading resolves context-first per SKILL.md §7 — no adapter content for it. Read before loading harness-coding under opencode (SKILL.md prerequisites).
+description: The filled-in adapter layer for the opencode harness (v2). Maps the capability contract (7 required + 4 mapped optional) to opencode's concrete tools (tool.read / tool.write / tool.edit / tool.apply_patch / tool.bash / tool.grep / tool.glob / tool.list / tool.question / tool.task / tool.skill), and declares quality-gate commands and role mapping. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding under opencode (SKILL.md prerequisites).
 ---
 
 # Adapter Layer: opencode
@@ -13,18 +13,18 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 
 ## 1. Capability Mapping Table
 
-> The 7 required capabilities + the 4 harness-mappable optional ones map to opencode primitives as follows (`find_skill` resolves context-first — no mapping row, see SKILL.md §7). Anything that can't be mapped is marked "unsupported" honestly — never invented. Tool names follow opencode's `tool.<name>` convention; per-tool permission (`allow` / `ask` / `deny`) is configured in the harness config (see §5).
+> All capabilities except `find_skill` map to opencode primitives as follows (`find_skill` resolves context-first per SKILL.md §7 — no mapping needed). Anything that can't be mapped is marked "unsupported" honestly — never invented. Tool names follow opencode's `tool.<name>` convention; per-tool permission (`allow` / `ask` / `deny`) is configured in the harness config (see §5).
 
 | Capability | Implementation in opencode | Notes |
 |------------|-----------------------------|-------|
-| `read` | **tool.read** | Returns file content tagged with line numbers; also lists directory contents on v1.1.60+ natively. **tool.list** remains available for explicit directory browsing (see §7) |
-| `write` | **tool.write** | Create / overwrite a file; gated by the `edit` permission key. Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §7) |
+| `read` | **tool.read** | Returns file content tagged with line numbers; also lists directory contents on v1.1.60+ natively. **tool.list** remains available for explicit directory browsing (see §6) |
+| `write` | **tool.write** | Create / overwrite a file; gated by the `edit` permission key. Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §6) |
 | `edit` | **tool.edit** (string replacement) or **tool.apply_patch** (unified diff) | Unique-match rule: a `tool.edit` with multiple matches needs a narrower context. Both gated by the `edit` permission key |
 | `glob` | **tool.glob** | pattern-match file listing (e.g. `specs/<slug>/*`) |
 | `grep` | **tool.grep** | regex content search, ripgrep-style; matches with file:line |
 | `run_command` | **tool.bash** | The only channel for quality gates. Permission `bash` supports an allow/ask/deny mode plus a command glob-pattern map |
-| `ask_user` | **tool.question** | Asks the user mid-execution. Batch: `tool.question` handles one question per call → serial asks within the same clarification round (see §7). When unavailable (non-interactive run) → degrade per §4 |
-| `spawn_agent` | **tool.task** (optional) | Spawns a subagent defined in `.opencode/agents/` (or `~/.config/opencode/agents/`); also invoked via `@<name>` mentions. Subagents can use only built-in tools (see §7) |
+| `ask_user` | **tool.question** | Asks the user mid-execution. Batch: `tool.question` handles one question per call → serial asks within the same clarification round (see §6). When unavailable (non-interactive run) → degrade per §4 |
+| `spawn_agent` | **tool.task** (optional) | Spawns a subagent defined in `.opencode/agents/` (or `~/.config/opencode/agents/`); also invoked via `@<name>` mentions. Subagents can use only built-in tools (see §6) |
 | `create_branch` | **tool.bash** `git checkout -b <name>` (optional) | no native worktree primitive; a worktree = `tool.bash` + `git worktree add` |
 | `check_command` | **tool.bash** `command -v <cmd>` (optional) | run once to decide |
 | `web_search` | No bundled search primitive → via an MCP search plugin if configured, else **tool.bash** + `curl` against an allowed API (optional; verify at setup) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |
@@ -61,13 +61,13 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 | `spawn_agent` | the orchestrator executes roles inline (also when the `task` permission denies) | `no sub-agent, inline execution` |
 | `create_branch` | change directly on the main workspace (or `tool.bash` git branch) | `not isolated (no branch capability)` |
 | `check_command` | run once via tool.bash | none |
-| `find_skill` | static conditional-skill table (SKILL.md §7) + `find-skill.py` drift warning | none |
+| `find_skill` | context-first per SKILL.md §7; no library at all → record `skill library unavailable` | environment flag when absent |
 | `web_search` | record `not verified online` in spec Assumptions | none |
 | Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
 
 ## 5. Permission Config for the Validation Scripts
 
-> The repo ships an `opencode.json` at the repo root with `permission.bash` allow patterns for `scripts/artifact-check.py` / `scripts/derive-report.py` / `scripts/find-skill.py` (plus the `echo exit` exit-code readback) — the opencode equivalent of `.claude/settings.json` under Claude Code. When the skill is installed into a target project, declare the same allow patterns in that project's own config.
+> The repo ships an `opencode.json` at the repo root with `permission.bash` allow patterns for `scripts/artifact-check.py` / `scripts/derive-report.py` (plus the `echo exit` exit-code readback) — the opencode equivalent of `.claude/settings.json` under Claude Code. When the skill is installed into a target project, declare the same allow patterns in that project's own config.
 
 ## 6. Capability-Contract Consistency Self-Check
 

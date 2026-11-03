@@ -1,6 +1,6 @@
 ---
 name: harness-coding-adapter-template
-description: The generic adapter template for harness-coding (v2). When onboarding a new harness, copy this file to references/adapters/<harness>.md and fill in section by section, mapping the capabilities from the capability contract (7 required + optional; find_skill resolves context-first — no mapping row, see SKILL.md §7) to the current harness's concrete tools/primitives, and declaring quality-gate commands, role mapping, and degradation rules. Read before loading harness-coding (SKILL.md prerequisites).
+description: The generic adapter template for harness-coding (v2). When onboarding a new harness, copy this file to references/adapters/<harness>.md and fill in section by section, mapping the capability contract (7 required + 4 mapped optional) to the current harness's concrete tools/primitives, and declaring quality-gate commands, role mapping, and degradation rules. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding (SKILL.md prerequisites).
 ---
 
 # Adapter Template (for filling in)
@@ -20,7 +20,7 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 
 ## 1. Capability Mapping Table
 
-> Map the 7 required capabilities + the harness-mappable optional ones one by one (`find_skill` resolves context-first — no mapping row, see SKILL.md §7); anything that can't be mapped must be honestly marked "unsupported" — never invent one.
+> Map all capabilities one by one (`find_skill` is excluded — it resolves context-first per SKILL.md §7 and needs no mapping); anything that can't be mapped must be honestly marked "unsupported" — never invent one.
 
 | Capability | Implementation in this harness | Notes |
 |------------|--------------------------------|-------|
@@ -67,7 +67,6 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 | `spawn_agent` | fill-in | no sub-agent, inline execution |
 | `create_branch` | fill-in | not isolated (no branch capability) |
 | `check_command` | fill-in | none |
-| `find_skill` | static conditional-skill table (SKILL.md §7) + `find-skill.py` drift warning | none |
 | `web_search` | fill-in — record `not verified online` in spec Assumptions | none |
 | Other (required capability missing) | fill-in | mark "unsupported capabilities" at the top of the adapter layer |
 

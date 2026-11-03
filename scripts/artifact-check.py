@@ -152,7 +152,13 @@ def run_fixtures(fixdir):
         print(f"FAIL fixtures: no cases under {fixdir}")
         return 1
     for case in cases:
-        expect = (case / ".expect").read_text(encoding="utf-8").strip()
+        expect_file = case / ".expect"
+        if not expect_file.exists():
+            # Not an artifact-fixture case (e.g. fixtures/skills/ for the
+            # find-skill probe) -- skip quietly instead of crashing.
+            print(f"[SKIP] {case.name}: no .expect (not an artifact fixture)")
+            continue
+        expect = expect_file.read_text(encoding="utf-8").strip()
         specs = case / "specs"
         errs = []
         if specs.is_dir():

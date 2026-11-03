@@ -9,7 +9,7 @@
 ## 核心思想
 
 1. **产物即状态**：任务状态活在平凡 markdown 产物里（`specs/<slug>/` 下的 `spec.md` / `plan.md` / `tasks.md`；🟡 单文件 `intent.md`）——恢复 = 读文件，版本 = git，并发 = git 分支
-2. **能力名即契约**：方法论主体只引用能力名（7 必需 + 5 可选，每个可选项都带降级规则）；具体工具由适配器层决定
+2. **能力名即契约**：方法论主体只引用能力名（7 必需 + 5 可选，每个可选项都带降级规则）；可选能力**运行时对照对话上下文解析**（context-first），适配器映射仅为提示
 3. **纪律 → 结构**：v1 用 prompt 条款求纪律（"绝不凭记忆声称通过"）；v2 用结构保证它（勾选必须附输出、open blocker/major 拒绝收尾、`artifact-check.py` 机械执法）
 4. **单一事实源**：接入新 Harness 只需一份适配器文件
 
@@ -22,7 +22,7 @@
 | 🔴 完整 | `specs/<slug>/` 下的 `spec.md` / `plan.md` / `tasks.md` | 信息补给 → spec 草稿 → 澄清门 → plan → 逐任务实现+门禁 → 评审 → 收尾重验 | 收尾回复 + 按需追溯视图 |
 | 📋 仅结论 | spec/plan **即交付物** | 定位 → 评审/校验 | 校验结论 |
 
-- **前置链路**（🟡/🔴，需求模糊时）：信息补给（`find_skill` 技能检索 / `web_search` 外部核实——两者均按 **context-first** 从当前对话上下文解析：宿主原生机制优先，适配器映射仅为提示）→ 澄清门（模糊点拆成**假设**/A-id 与**问题**/批量一轮反问）→ 产物定稿
+- **前置链路**（🟡/🔴，需求模糊时）：信息补给（`find_skill` 本地技能检索 / `web_search` 外部核实）→ 澄清门（模糊点拆成**假设**/A-id 与**问题**/批量一轮反问）→ 产物定稿
 - **收尾重验**（🟡/🔴）：逐任务绿 ≠ 全仓绿；收尾前强制全量门禁重跑；合并决策（PR / 直接合并 / 继续迭代）并入收尾 ask_user
 - **多轮续接**：slug 由首个需求生成；后续消息默认追加任务（🟡 = 追加意图段）；通道升级补齐产物、绝不降级；**AC 只增不改**（确需修改用 supersede 标注重指向）
 
@@ -55,7 +55,7 @@ lint → format → type → test
 
 ```
 harness-coding/
-├── SKILL.md                        # 方法论主体（v2：70 行）
+├── SKILL.md                        # 方法论主体（v2：68 行）
 ├── SDD-REFACTOR-DESIGN.md          # v2 重构设计文档（已冻结）
 ├── references/
 │   ├── capability-contract.md      # 能力契约（7 必需 + 5 可选）
@@ -64,8 +64,8 @@ harness-coding/
 ├── scripts/
 │   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫 / Gate N/A 配对）
 │   ├── derive-report.py            # 按需追溯视图（merge-base 基线，stdout，永不落盘）
-│   └── find-skill.py               # 技能探针（跨位置发现 + 同名版本漂移告警，context-first 的补充）
-└── fixtures/                       # 5 个校验用例（含故意损坏的 broken、合法豁免的 gate-na）
+│   └── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警）
+└── fixtures/                       # 产物校验用例 5 个（含故意损坏的 broken、合法豁免的 gate-na）+ 探针自检用例 3 个
 ```
 
 ## 安装
@@ -76,7 +76,7 @@ harness-coding/
 | opencode | `<project>/.opencode/skills/harness-coding/`（或 `~/.config/opencode/skills/`） |
 | Codex | `<project>/.codex/skills/harness-coding/`（或 `~/.codex/skills/`） |
 
-> 权限：宿主项目需放行 `python scripts/artifact-check.py*`、`python scripts/derive-report.py*` 与 `python scripts/find-skill.py*`（参见本仓库的 `.claude/settings.json` / `opencode.json`）。
+> 权限：宿主项目需放行 `python scripts/artifact-check.py*` 与 `python scripts/derive-report.py*`（参见本仓库的 `.claude/settings.json` / `opencode.json`）。
 
 ## 验证
 
@@ -84,13 +84,12 @@ harness-coding/
 python scripts/artifact-check.py --fixtures fixtures/   # 5 个用例应全部符合预期（broken 预期报错）
 python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
 python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）
-python scripts/find-skill.py "<query>"                  # 跨位置技能发现 + 漂移检测（exit 1 = 检测到漂移）
 ```
 
 ## 能力契约与适配器
 
 必需（7）：`read` / `write` / `edit` / `glob` / `grep` / `run_command` / `ask_user`（批量签名；仅支持单问的原语在同一轮内降级为连续逐问）。
-可选（5，均带降级）：`spawn_agent`（内联执行）/ `create_branch`（主工作区 + 标注 not isolated）/ `check_command`（先跑一次再决定）/ `find_skill`（**context-first 解析**：宿主原生技能机制优先，降级到 SKILL.md §7 的静态条件技能表；`find-skill.py` 探针检测跨位置版本漂移）/ `web_search`（在 spec Assumptions 记录 `not verified online`）。适配器不再承载任何技能加载内容。
+可选（5，均带降级）：`spawn_agent`（内联执行）/ `create_branch`（主工作区 + 标注 not isolated）/ `check_command`（先跑一次再决定）/ `find_skill`（**context-first**：宿主原生技能机制优先 → `scripts/find-skill.py` 探针 → SKILL.md §7 静态表；库不存在显式记录 `skill library unavailable`）/ `web_search`（在 spec Assumptions 记录 `not verified online`）。适配器不含任何技能加载逻辑——机械层归属宿主，harness-coding 只承载纪律。
 
 接入新 Harness：复制 `_adapter-template.md` 逐节填写 → 跑一个 🟢 任务（必须零新文件）→ 跑一个 🔴 示例验证产物 + 校验器。见 `references/capability-contract.md` §6。
 

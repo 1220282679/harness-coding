@@ -1,6 +1,6 @@
 ---
 name: harness-coding-adapter-codex
-description: The filled-in adapter layer for the OpenAI Codex CLI harness (v2). Maps the required + harness-mappable optional capabilities from references/capability-contract.md to Codex's concrete tools (read_file / apply_patch / shell / rg / glob_file_search / list_dir / spawn_agent), and declares quality-gate commands and role mapping. Skill loading resolves context-first per SKILL.md §7 — no adapter content for it. Read before loading harness-coding under Codex (SKILL.md prerequisites).
+description: The filled-in adapter layer for the OpenAI Codex CLI harness (v2). Maps the capability contract (7 required + 4 mapped optional) to Codex's concrete tools (read_file / apply_patch / shell / rg / glob_file_search / list_dir / spawn_agent), and declares quality-gate commands and role mapping. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding under Codex (SKILL.md prerequisites).
 ---
 
 # Adapter Layer: OpenAI Codex CLI
@@ -13,12 +13,12 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness (v2). 
 
 ## 1. Capability Mapping Table
 
-> The 7 required capabilities + the 4 harness-mappable optional ones map to Codex primitives as follows (`find_skill` resolves context-first — no mapping row, see SKILL.md §7). Anything that can't be mapped is marked "unsupported" honestly — never invented.
+> All capabilities except `find_skill` map to Codex primitives as follows (`find_skill` resolves context-first per SKILL.md §7 — no mapping needed). Anything that can't be mapped is marked "unsupported" honestly — never invented.
 
 | Capability | Implementation in Codex | Notes |
 |------------|--------------------------|-------|
-| `read` | **read_file** tool | Reads a single file's content. **Deviation**: directory reads NOT supported → use **list_dir** (see §6). `shell` (`cat`) is a last-resort fallback |
-| `write` | **apply_patch** (create / update) | No standalone overwrite-write tool: create via `*** Add File`, overwrite via `*** Update File` (full V4A diff). Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §6) |
+| `read` | **read_file** tool | Reads a single file's content. **Deviation**: directory reads NOT supported → use **list_dir** (see §5). `shell` (`cat`) is a last-resort fallback |
+| `write` | **apply_patch** (create / update) | No standalone overwrite-write tool: create via `*** Add File`, overwrite via `*** Update File` (full V4A diff). Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §5) |
 | `edit` | **apply_patch** (update, V4A diff format) | The `*** Update File` hunk must match uniquely; an ambiguous hunk fails → narrow the context. Equivalent to the contract's unique-match rule |
 | `glob` | **glob_file_search** tool | Native glob file search (e.g. `specs/<slug>/*`); on older builds fall back to `shell` + `find`/`ls` |
 | `grep` | **rg** tool | Native ripgrep tool; on older builds fall back to `shell` + `rg`/`grep -rn` |
@@ -61,7 +61,7 @@ description: The filled-in adapter layer for the OpenAI Codex CLI harness (v2). 
 | `spawn_agent` | the orchestrator executes roles inline (also when `multi_agent` is off) | `no sub-agent, inline execution` |
 | `create_branch` | change directly on the main workspace (or `shell` git branch) | `not isolated (no branch capability)` |
 | `check_command` | run once via shell | none |
-| `find_skill` | static conditional-skill table (SKILL.md §7) + `find-skill.py` drift warning | none |
+| `find_skill` | context-first per SKILL.md §7; no library at all → record `skill library unavailable` | environment flag when absent |
 | `web_search` | record `not verified online` in spec Assumptions | none |
 | Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
 

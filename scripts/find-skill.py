@@ -1,135 +1,195 @@
 #!/usr/bin/env python3
-"""find-skill.py -- cross-location skill discovery + drift probe (harness-coding v2.2.0).
+"""find-skill.py -- skill-library probe for the find_skill capability.
 
-Complements context-first resolution (SKILL.md sec 7): the host's native skill
-mechanism remains the primary loader. This probe adds the one thing no single
-host can see: the same skill installed at multiple locations with different
-versions (drift). It also gives an explicit answer to "does a skill library
-exist at all" -- an environment condition, distinct from a normal no-match.
+Context-first fallback (harness-coding contract #11 / SKILL.md §7): when the
+harness has no native skill-search primitive in the conversation context,
+this script probes the standard skill-library locations, matches a query
+against skill frontmatter, and reports same-name/version drift between
+locations.
+
+Semantics (exit codes):
+  0 = hit(s) found
+  1 = library present, no match -> use the static conditional table (SKILL.md §7)
+  2 = no skill library found at all -> record `skill library unavailable`
+
+Drift detection: the same skill `name` found in multiple locations with
+different `version` values is reported as a DRIFT warning on stderr -- trust
+none of the copies until resolved (observed failure class: a stale v1.0.0
+copy shadowing the current v2.x in another location).
 
 Usage:
-  python scripts/find-skill.py "<query>"                 # probe standard roots
-  python scripts/find-skill.py "<query>" --roots A,B     # custom roots (testing)
+  python scripts/find-skill.py "<query>"                # probe default roots
+  python scripts/find-skill.py "<query>" --root DIR     # probe extra roots only
+  python scripts/find-skill.py --fixtures fixtures/skills/   # self-test
 
-Exit codes:
-  0 = ok (matches found, or clean no-match, or library-missing recorded)
-  1 = drift detected (same skill name, different versions across locations)
-  2 = usage error
-
-Standard library only -- no third-party dependencies.
+Pure standard library; zero third-party dependencies.
 """
+
+import argparse
 import re
 import sys
 from pathlib import Path
 
-HOME = Path.home()
-STANDARD_ROOTS = [
-    HOME / ".agents" / "skills",
-    HOME / ".claude" / "skills",
-    HOME / ".codex" / "skills",
-    HOME / ".config" / "opencode" / "skills",
-    Path.cwd() / ".agents" / "skills",
-    Path.cwd() / ".claude" / "skills",
-    Path.cwd() / ".opencode" / "skills",
-    Path.cwd() / ".codex" / "skills",
+DEFAULT_ROOTS = [
+    "~/.agents/skills",           # cross-runtime Agent Skills Standard
+    "~/.claude/skills",           # Claude Code
+    "~/.codex/skills",            # OpenAI Codex
+    "~/.config/opencode/skills",  # opencode
+    "~/.workbuddy/skills",        # WorkBuddy
+]
+PROJECT_ROOTS = [
+    ".agents/skills",
+    ".claude/skills",
+    ".codex/skills",
+    ".opencode/skills",
 ]
 
-FM_KEYS = ("name", "version", "description")
+FIXTURE_QUERY = "validation demo"  # fixed query for --fixtures self-test
+
+FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---", re.S)
+FIELD_RES = {k: re.compile(rf"^{k}:\s*(.+)$", re.M) for k in ("name", "version", "description")}
 
 
-def parse_frontmatter(path):
-    """Minimal frontmatter parse: name / version / description as flat strings."""
-    meta = {}
+def parse_skill(skill_md):
+    """Parse SKILL.md frontmatter -> {name, version, description} or None."""
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = skill_md.read_text(encoding="utf-8", errors="replace")
     except OSError:
-        return meta
-    m = re.match(r"^---\s*\n(.*?)\n---\s*\n?", text, re.S)
+        return None
+    m = FRONTMATTER_RE.match(text)
     if not m:
-        return meta
-    for line in m.group(1).splitlines():
-        kv = re.match(rf"^({'|'.join(FM_KEYS)})\s*:\s*(.*)$", line)
-        if kv:
-            meta[kv.group(1)] = kv.group(2).strip().strip('"').strip("'")
-    return meta
+        return None
+    block = m.group(1)
+    fields = {}
+    for key, rx in FIELD_RES.items():
+        fm = rx.search(block)
+        if fm:
+            fields[key] = fm.group(1).strip().strip('"')
+    if "name" not in fields:
+        return None
+    fields.setdefault("version", "unknown")
+    fields.setdefault("description", "")
+    return fields
 
 
-def scan(root):
-    """All skills under one root: {dir_name: (path, meta)}."""
-    found = {}
-    if not root.is_dir():
-        return found
-    for skill_md in sorted(root.glob("*/SKILL.md")):
-        meta = parse_frontmatter(skill_md)
-        name = meta.get("name") or skill_md.parent.name
-        found[skill_md.parent.name] = (skill_md, {**meta, "name": name})
-    return found
+def scan_roots(roots):
+    """Scan roots -> (library: {name: [entry]}, locations_seen: int).
+
+    entry = {name, version, description, root, path}.
+    """
+    library, locations_seen = {}, 0
+    for root in roots:
+        root = Path(root).expanduser()
+        if not root.is_dir():
+            continue
+        locations_seen += 1
+        for skill_md in sorted(root.glob("*/SKILL.md")):
+            fields = parse_skill(skill_md)
+            if not fields:
+                continue
+            entry = dict(fields, root=str(root), path=str(skill_md))
+            library.setdefault(fields["name"], []).append(entry)
+    return library, locations_seen
 
 
-def main(argv):
-    args = [a for a in argv[1:] if not a.startswith("--")]
-    roots_arg = None
-    if "--roots" in argv:
-        i = argv.index("--roots")
-        if i + 1 >= len(argv):
-            print("usage: find-skill.py <query> [--roots dirA,dirB]")
-            return 2
-        roots_arg = [Path(p) for p in argv[i + 1].split(",") if p.strip()]
-    if not args:
-        print(__doc__.strip().splitlines()[0])
-        print('usage: find-skill.py "<query>" [--roots dirA,dirB]')
-        return 2
+def match(library, query):
+    """Score entries against query terms; return [(score, entry)] desc."""
+    terms = [t for t in re.split(r"\W+", query.lower()) if len(t) > 2]
+    scored = []
+    for entries in library.values():
+        for e in entries:
+            name_hay = e["name"].lower()
+            desc_hay = e["description"].lower()
+            score = sum(2 for t in terms if t in name_hay)
+            score += sum(1 for t in terms if t in desc_hay)
+            if score > 0:
+                scored.append((score, e))
+    scored.sort(key=lambda se: -se[0])
+    return scored
 
-    query = args[0].lower()
-    roots = roots_arg if roots_arg is not None else STANDARD_ROOTS
-    scanned = [(r, scan(r)) for r in roots]
-    existing = [(r, skills) for r, skills in scanned if skills]
 
-    if not existing:
-        print("skill library unavailable: none of the standard locations exist")
-        print("  probed: " + ", ".join(str(r) for r in roots))
-        print("  (environment condition -- record it; distinct from a no-match)")
-        return 0
-
-    print(f"query: {args[0]}")
-    matches = []
-    for root, skills in existing:
-        for dirname, (path, meta) in skills.items():
-            hay = f"{dirname} {meta.get('name', '')} {meta.get('description', '')}".lower()
-            if query in hay:
-                matches.append((root, dirname, meta, path))
-
-    if matches:
-        for root, dirname, meta, path in matches:
-            ver = meta.get("version", "?")
-            desc = meta.get("description", "")[:100]
-            print(f"  HIT  {dirname} v{ver}  [{root}]")
-            if desc:
-                print(f"       {desc}")
-    else:
-        print("  no match (normal condition -- fall back to the static table, SKILL.md sec 7)")
-
-    drift = []
-    by_name = {}
-    for root, skills in existing:
-        for dirname, (path, meta) in skills.items():
-            by_name.setdefault(meta.get("name", dirname), []).append((root, meta.get("version", "?")))
-    for name, locs in sorted(by_name.items()):
-        versions = {v for _, v in locs}
+def drift_warnings(library):
+    """Same skill name in multiple locations with differing versions."""
+    warns = []
+    for name, entries in sorted(library.items()):
+        if len(entries) < 2:
+            continue
+        versions = {e["version"] for e in entries}
         if len(versions) > 1:
-            drift.append((name, locs))
+            detail = " vs ".join(f"v{e['version']} ({e['root']})" for e in entries)
+            warns.append(f"DRIFT: '{name}' {detail} -- trust none until resolved")
+    return warns
 
-    if drift:
-        print("\nDRIFT WARNING: same skill, different versions across locations")
-        for name, locs in drift:
-            detail = "; ".join(f"v{v} @ {r}" for r, v in locs)
-            print(f"  {name}: {detail}")
-        print("  fix the copies (keep one source of truth); never silently pick one")
+
+def print_hits(scored):
+    for score, e in scored:
+        print(f"{e['name']}  v{e['version']}  [score {score}]  {e['path']}")
+        if e["description"]:
+            desc = e["description"][:110] + ("..." if len(e["description"]) > 110 else "")
+            print(f"    {desc}")
+
+
+def run(query, roots):
+    library, _ = scan_roots(roots)
+    for w in drift_warnings(library):
+        print(w, file=sys.stderr)
+    if not library:
+        print("no skill library found in any standard location", file=sys.stderr)
+        return 2
+    scored = match(library, query)
+    if not scored:
+        print(f"no match for '{query}' -- fall back to the static table (SKILL.md §7)")
         return 1
-
-    print(f"\nok: {sum(len(s) for _, s in existing)} skill(s) across {len(existing)} location(s), no drift")
+    print_hits(scored)
     return 0
 
 
+def run_fixtures(fixtures_dir):
+    """Self-test: each case dir holds synthetic library roots + .expect
+    (lines: exit=<0|1|2>, optional drift=warn|none)."""
+    ok = True
+    for case in sorted(p for p in fixtures_dir.iterdir() if p.is_dir()):
+        expect = {}
+        exp_file = case / ".expect"
+        if exp_file.exists():
+            for line in exp_file.read_text(encoding="utf-8").splitlines():
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    expect[k.strip()] = v.strip()
+        roots = [str(d) for d in sorted(case.iterdir()) if d.is_dir()]
+        library, _ = scan_roots(roots)
+        warns = drift_warnings(library)
+        if not library:
+            code = 2
+        elif match(library, FIXTURE_QUERY):
+            code = 0
+        else:
+            code = 1
+        want_exit = int(expect.get("exit", -1))
+        want_drift = expect.get("drift", "none")
+        got_drift = "warn" if warns else "none"
+        passed = code == want_exit and got_drift == want_drift
+        ok = ok and passed
+        print(f"{'PASS' if passed else 'FAIL'}: {case.name} "
+              f"(exit={code} want {want_exit}; drift={got_drift} want {want_drift})")
+    return 0 if ok else 3
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Skill-library probe (find_skill fallback)")
+    ap.add_argument("query", nargs="?", help="search terms, e.g. 'clarification questions'")
+    ap.add_argument("--root", action="append", default=[],
+                    help="probe these library roots instead of the defaults")
+    ap.add_argument("--fixtures", type=Path, metavar="DIR",
+                    help="self-test mode: run fixture cases under DIR and exit")
+    args = ap.parse_args()
+    if args.fixtures:
+        sys.exit(run_fixtures(args.fixtures))
+    if not args.query:
+        ap.error("a query is required unless --fixtures is used")
+    roots = args.root if args.root else DEFAULT_ROOTS + PROJECT_ROOTS
+    sys.exit(run(args.query, roots))
+
+
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    main()

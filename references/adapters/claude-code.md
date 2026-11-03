@@ -1,6 +1,6 @@
 ---
 name: harness-coding-adapter-claude-code
-description: The filled-in adapter layer for the Claude Code harness (v2). Maps the required + harness-mappable optional capabilities from references/capability-contract.md to Claude Code's concrete tools (Read / Write / Edit / Glob / Grep / Bash / AskUserQuestion / Agent / EnterWorktree / WebSearch), and declares quality-gate commands and role mapping. Skill loading resolves context-first per SKILL.md §7 — no adapter content for it. Read before loading harness-coding under Claude Code (SKILL.md prerequisites).
+description: The filled-in adapter layer for the Claude Code harness (v2). Maps the capability contract (7 required + 4 mapped optional) to Claude Code's concrete tools (Read / Write / Edit / Glob / Grep / Bash / AskUserQuestion / Agent / EnterWorktree / WebSearch), and declares quality-gate commands and role mapping. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding under Claude Code (SKILL.md prerequisites).
 ---
 
 # Adapter Layer: Claude Code
@@ -11,7 +11,7 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 
 ## 1. Capability Mapping Table
 
-> The 7 required capabilities + the 4 harness-mappable optional ones map to Claude Code primitives as follows (`find_skill` resolves context-first — no mapping row, see SKILL.md §7). Anything that can't be mapped is marked "unsupported" honestly — never invented.
+> All capabilities except `find_skill` map to Claude Code primitives as follows (`find_skill` resolves context-first per SKILL.md §7 — no mapping needed). Anything that can't be mapped is marked "unsupported" honestly — never invented.
 
 | Capability | Implementation in Claude Code | Notes |
 |------------|-------------------------------|-------|
@@ -59,7 +59,7 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 | `spawn_agent` | the orchestrator executes roles inline | `no sub-agent, inline execution` |
 | `create_branch` | change directly on the main workspace | `not isolated (no branch capability)` |
 | `check_command` | run once via Bash | none |
-| `find_skill` | static conditional-skill table (SKILL.md §7) + `find-skill.py` drift warning | none |
+| `find_skill` | context-first per SKILL.md §7; no library at all → record `skill library unavailable` | environment flag when absent |
 | `web_search` | record `not verified online` in spec Assumptions | none |
 | Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
 

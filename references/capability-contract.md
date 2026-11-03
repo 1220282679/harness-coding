@@ -1,6 +1,6 @@
 ---
 name: harness-coding-capability-contract
-description: The harness capability contract for the harness-coding skill (v2). Defines signatures for 7 required + 5 optional capabilities (read/write/edit/glob/grep/run_command/ask_user plus optional spawn_agent/create_branch/check_command/find_skill/web_search), context-first resolution for optional capabilities, the quality-gate abstraction, the role abstraction, degradation rules, and the onboarding checklist. Artifacts-as-state: no report-writing capability exists — task state lives in plain markdown artifacts under specs/<slug>/, history lives in git. Read on demand when loading harness-coding (L2 of the loading tiers).
+description: The harness capability contract for the harness-coding skill (v2). Defines signatures for 7 required + 5 optional capabilities (read/write/edit/glob/grep/run_command/ask_user plus optional spawn_agent/create_branch/check_command/find_skill/web_search), the quality-gate abstraction, the role abstraction, degradation rules, and the onboarding checklist. Artifacts-as-state: no report-writing capability exists — task state lives in plain markdown artifacts under specs/<slug>/, history lives in git. Read on demand when loading harness-coding (L2 of the loading tiers).
 ---
 
 # Harness Capability Contract
@@ -42,12 +42,14 @@ description: The harness capability contract for the harness-coding skill (v2). 
 | 8 | `spawn_agent` | `spawn_agent(role, prompt) -> AgentReport` | Spawn a sub-agent, collect a structured report | Orchestrator executes the role inline (serially), responsibilities unchanged |
 | 9 | `create_branch` | `create_branch(name) -> void` | Create an isolated branch/worktree | Work directly on the main workspace, annotate `not isolated (no branch capability)` |
 | 10 | `check_command` | `check_command(cmd) -> bool` | Verify a command is available | Run once via `run_command` to decide |
-| 11 | `find_skill` | `find_skill(query) -> list[skill]` | Resolve conditional skills from the **live conversation context** (after classification, before drafting, scope-fuzzy 🟡/🔴); a hit loads via the host's native skill mechanism | Fall back to the static table in **SKILL.md §7**; a **missing library** (no standard location exists) is an environment condition — record it, distinct from a normal no-match |
+| 11 | `find_skill` | `find_skill(query) -> list[skill]` | Conditional-skill discovery (🟡/🔴, scope fuzzy; after classification, before drafting), resolved **context-first**: prefer the harness's native skill mechanism; else `scripts/find-skill.py` probes the standard library locations; a hit is loaded as a conditional skill | No match → static conditional-skill table (SKILL.md §7). Library absent at all → record `skill library unavailable` in spec Assumptions, then the static table |
 | 12 | `web_search` | `web_search(query) -> results` | Verify external knowledge the repo cannot resolve (dependency versions / compatibility / API behavior) | Record `not verified online` in the spec's Assumptions section; flow not blocked |
 
 > **`web_search` discipline** (all three mandatory): results entering a spec must carry **source + retrieval time**; acceptance criteria (AC) must be **locally executable** — a web-search conclusion never becomes an AC; restraint — if the repo can answer it, do not search the web.
 >
-> **Context-first resolution** (applies to every optional capability): capability names are semantic anchors. At runtime resolve each against the tools **actually present in the current conversation context** — the host's native skill/search mechanism first; adapters carry **hints only**, and live context wins over a hint (record the deviation). Adapters hold no skill-loading content; the static conditional-skill table lives in SKILL.md §7. `scripts/find-skill.py` (optional probe) adds cross-location discovery and flags same-name version drift that no single host can see.
+> **`find_skill` semantics**: context-first — the harness's own skill mechanism (as visible in the live conversation) is the primary resolver; the probe script is the fallback. Adapters carry **no skill-loading logic at all**.
+>
+> **Context-first resolution (`find_skill` / `web_search`)**: capability names are semantic anchors, never implementations. Resolve them at runtime against the tools **actually present in the conversation context**; adapter mapping rows are hints, not truth — on conflict the live context wins and the deviation is recorded.
 
 ## 3. Quality-Gate Abstraction (not a capability, a protocol)
 
@@ -86,13 +88,14 @@ lint → format --check → type check --strict → test (including the coverage
 | `spawn_agent` | Orchestrator plays the role inline | `no sub-agent, inline execution` |
 | `create_branch` | Change directly on the main workspace | `not isolated (no branch capability)` |
 | `check_command` | Run once via `run_command` | none |
-| `find_skill` | Static conditional-skill table (SKILL.md §7) + probe drift warning | none |
+| `find_skill` (library absent) | Record `skill library unavailable` in spec Assumptions; then static conditional-skill table (SKILL.md §7) | environment flag |
+| `find_skill` (library present, no match) | Static conditional-skill table (SKILL.md §7) | none |
 | `web_search` | Record `not verified online` in spec Assumptions | none |
 | `ask_user` (headless) | Most conservative option, recorded | `⚠️ unable to ask the user; decided on the conservative option` |
 
 ## 6. Onboarding a New Harness (Adapter Checklist)
 
 1. Map each of the **7 required capabilities** to that harness's tools/primitives (fill-in table in `adapters/_adapter-template.md` §1)
-2. Copy and generate `adapters/<harness>.md` per the template: capability table (7 required + optional; `find_skill` resolves context-first — no mapping row, see SKILL.md §7) + quality-gate commands + role mapping + web_search setup notes + degradation declarations; delete the template's "how to generate" section
+2. Copy and generate `adapters/<harness>.md` per the template: capability table (7 required + 4 mapped optional — `find_skill` is context-first and unmapped) + quality-gate commands + role mapping + degradation declarations; delete the template's "how to generate" section
 3. If a required capability cannot be satisfied → annotate "unsupported capabilities" at the top of the adapter; the skill continues per the degradation rules
 4. Run one lightweight requirement end-to-end (e.g. fix a typo): the 🟢 channel must complete **without creating any new file**; then run one 🔴 sample to verify artifacts + `artifact-check.py` pass

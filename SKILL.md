@@ -56,11 +56,13 @@ Templates: `references/templates/{spec,plan,tasks,intent}.md`. Checked tasks mus
 
 The closing reply is derived from artifacts + diff — never from memory: requirement positioning / verification evidence / remaining risks (open Deferred). On-demand view: `python scripts/derive-report.py specs/<slug> [--base <ref>]` (stdout, never persisted; **no report file is ever written**).
 
-## 7. Conditional Skills (context-first)
+## 7. Optional Capabilities: Context-First Resolution
 
-Optional capabilities resolve against the tools **actually present in the current conversation context**: prefer the host's native skill/search mechanism — adapters carry hints only, and live context wins over a hint (record the deviation). Loading uses the native mechanism. Optional probe: `python scripts/find-skill.py "<query>"` adds cross-location discovery + same-name version-drift warnings. Trigger: after classification, before drafting, scope-fuzzy 🟡/🔴 only.
+`find_skill` / `web_search` are **semantic anchors, not implementations** — resolve each against the tools actually present in this conversation (native skill/search mechanisms first). Adapter mapping rows are hints; live context wins — record the deviation.
 
-Static fallback (no native mechanism / no hit): stage → skill type — post-plan: isolation (`using-git-worktrees`) + decision-record (ADRs); gate failure: debugging (`systematic-debugging`); gate pass pre-review: simplify; pre-close-out: security review (🔴) + verification; post-close-out: branch-finishing. Skill-library drift (same name, different versions across locations) → fix the copies, never silently pick one.
+- `web_search`: cite source + retrieval time; AC stays locally executable; if the repo can answer, do not search. No tool available → record `not verified online` in spec Assumptions
+- `find_skill` (🟡/🔴, scope fuzzy; after classification, before drafting): prefer the native skill mechanism; else `python scripts/find-skill.py "<query>"` probes the standard library locations (`~/.agents/skills` + harness dirs) and flags same-name/version drift. Exit 2 = no library → record `skill library unavailable` in Assumptions
+- Static fallback (no dynamic hit): isolation (after plan) / decision record (after plan) / debugging (after gate failure) / simplify (after gates) / security review (before close-out re-verify, 🔴) / verification (before close-out) / branch finishing (after close-out)
 
 ## Constraints
 
