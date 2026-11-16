@@ -20,6 +20,7 @@ from pathlib import Path
 
 AC_RE = re.compile(r"^\s*-\s*(AC-\d+)\s*:", re.M)
 TASK_RE = re.compile(r"^\s*-\s*\[([ x])\]\s*(T\d+)\s*\(([^)]*)\)\s*:(.*)")
+TASK_LIKE_RE = re.compile(r"^\s*-\s*\[[ x]\]\s*T\d+")  # shaped like a task line but may fail the full format
 REVIEW_RE = re.compile(r"^\s*-\s*(R\d+)\s*\[([^\]]+)\]\s*:?(\s*.*)")
 SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 GATE_NA_RE = re.compile(r"GATE-NA\((\w+)\)")
@@ -110,6 +111,16 @@ def check_task_file(text, spec_acs, errs, where):
     for line in body.splitlines():
         m = TASK_RE.match(line)
         if not m:
+            # Task-shaped lines that fail the full format must not escape
+            # silently (fixed v2.3.1): without this guard, "- [x] T2: do
+            # stuff" (no (AC-x) refs block) skipped every task check --
+            # no "references no AC", no Output evidence check, no AC<->T
+            # coverage participation.
+            if TASK_LIKE_RE.match(line):
+                errs.append(
+                    f"{where}: malformed task line (expected '- [x] T<n> (AC-x): <desc>; "
+                    f"verify: <cmd>') -- silently skipped otherwise: {line.strip()}"
+                )
             continue
         seen_tasks = True
         checked, tid, refs, desc = m.groups()

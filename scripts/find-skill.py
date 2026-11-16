@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """find-skill.py -- skill-library probe for the find_skill capability.
 
-Context-first fallback (harness-coding contract #11 / SKILL.md §7): when the
+Context-first fallback (capability-contract §2 optional capability / SKILL.md §7): when the
 harness has no native skill-search primitive in the conversation context,
 this script probes the standard skill-library locations, matches a query
 against skill frontmatter, and reports same-name/version drift between

@@ -5,6 +5,22 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.1 — 2026-11-16
+
+Fixes the two actionable issues from the 2026-11-16 external scan (the scan's other findings are consciously-recorded open items in their own chains): one stale cross-reference and one validator blind spot. Lands as the first 🟡 dogfood chain under specs/ (`scan-fixes`).
+
+### Fixed
+
+- **Stale docstring reference** (find-skill.py): "harness-coding contract #11" → "capability-contract §2 optional capability / SKILL.md §7" — the contract is organized §1–§6 and has no numbered item #11; same stale-reference class as the v2.2.3 adapter sweep
+- **Malformed task lines now error** (artifact-check.py): a line shaped like a task (`- [x] T2: do stuff` — no `(AC-x)` reference block) was silently skipped by `check_task_file`: no "references no AC", no Output-evidence check, no AC↔T coverage participation. Lines matching the `- [<x>] T<n>` prefix but failing the full TASK_RE now report a "malformed task line" error (scope: Deferred D-lines and Review R-lines unaffected — spec A1 in the fixture). New fixture `malformed-task` pins the regression: expect fail + `err=` substring; under the old code it would have validated clean despite containing the broken line
+- **Docs drift caught by the same scan**: design doc §11.3's probe-fixture list was missing short-query (added v2.2.9 — README was synced then, the design-doc line was not); the README specs/ tree comment was missing dist-packaging (added v2.3.0)
+
+### Changed
+
+- SKILL.md `version: 2.3.1` (line count and L0 description budget held); README fixture counts 7 → 8 in the tree comment and the verification block
+- design doc §11.3 fixture table += `malformed-task` row
+- specs/ gains its first 🟡 chain (`scan-fixes`) — `artifact-check.py specs/` now validates 4 chains (3 🔴 + 1 🟡)
+
 ## v2.3.0 — 2026-11-16
 
 Adds the release mechanism the v2.2.9 .gitignore comment promised: one command packages the repo into a slim, installable skill bundle; dev-only files can never leak.
