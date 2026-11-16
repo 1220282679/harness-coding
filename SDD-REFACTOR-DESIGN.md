@@ -246,9 +246,12 @@ v1's many clauses were essentially **begging the model for discipline in prose**
 | `fix-typo` | 🟢 | zero new files end-to-end; lint/format actually executed |
 | `add-validation` | 🟡 | `intent.md` exists and carries a verify command; gate output pasted with the check |
 | `refactor-flow` | 🔴 | spec/plan/tasks schemas valid; AC↔T references closed; the `derive-report.py` view fully derivable |
-| `broken` (deliberately broken) | 🔴 | artifact-check **must error** (missing AC reference / check without output / Review open blocker) — proves the validator has teeth |
+| `broken` (deliberately broken) | 🔴 | artifact-check **must error** (missing AC reference / check without output / Review open blocker / undeclared exemption) — per-error-class assertions via `.expect` `err=` substrings since v2.2.7; proves the validator has teeth |
+| `gate-na` (added v2.0.2) | 🔴 | legal chain-wide exemption: every GATE-NA usage is paired with a `## Gate Exemptions` declaration |
+| `broken-intent-na` (added v2.2.7) | 🟡 | deliberately broken: a 🟡 intent uses GATE-NA(type) with no declaration — exposed the vacuous 🟡 pairing check (usage self-declared from the same full text); declarations now scoped to the intent's `## Gate Exemptions` section |
+| `intent-gate-na` (added v2.2.7) | 🟡 | legal 🟡 exemption: usage declared in the intent's `## Gate Exemptions` section — the pass side of the pairing matrix |
 
-Run: `python scripts/artifact-check.py --fixtures fixtures/`, delivered as part of §8 migration step 2. Assertions split into two classes: **machine assertions** (artifact shape, auto-validated by artifact-check) and **manual drill criteria** (e.g. "lint/format actually executed", a §10 manual item) — fix-typo's executability assertion belongs to the latter.
+Run: `python scripts/artifact-check.py --fixtures fixtures/`, delivered as part of §8 migration step 2. Probe fixtures (`fixtures/skills/`, added v2.2.0: drift / no-drift / empty) self-test `find-skill.py` separately. Assertions split into two classes: **machine assertions** (artifact shape, auto-validated by artifact-check) and **manual drill criteria** (e.g. "lint/format actually executed", a §10 manual item) — fix-typo's executability assertion belongs to the latter.
 
 ## 12. Multi-turn & continuation protocol (task-ownership rules)
 

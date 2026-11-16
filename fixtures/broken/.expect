@@ -1,1 +1,6 @@
 fail
+err=references unknown AC
+err=no 'Output:'
+err=is not covered by any task
+err=closing is illegal
+err=declares no matching

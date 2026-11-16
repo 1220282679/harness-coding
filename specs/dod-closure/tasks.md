@@ -16,7 +16,7 @@
 - [x] T12 (AC-13): bump to 2.2.6, CHANGELOG, close-out re-verify; Output: SKILL.md `version: 2.2.6`; CHANGELOG v2.2.6 entry; close-out: `artifact-check.py --fixtures fixtures` → 6 cases matched, `find-skill.py --fixtures fixtures/skills` → 3 PASS, `artifact-check.py specs/` → PASS; GATE-NA(lint) / GATE-NA(format) / GATE-NA(type) / GATE-NA(test) declared chain-wide in spec (test slot fulfilled by the fixture suites)
 
 ## Deferred
-- [ ] D1: multi-turn continuation drill (same-slug task append + channel-upgrade backfill, §12) — trigger: the first real follow-up requirement landing on an existing chain; suggested follow-up: run it then and check the §10 item
+- [x] D1: multi-turn continuation drill (same-slug task append + channel-upgrade backfill, §12) — completed as the v2.2.5 same-chain append (T7–T9, AC-9 checked); checked off 2026-11-16 via review-hardening T3
 
 ## Review
 - R1 [resolved]: README verification block lacked the probe self-test command (found in the 2026-11-03 audit) → fixed in T3

@@ -5,6 +5,12 @@ Usage:
     python scripts/artifact-check.py <specs_dir> [<specs_dir> ...]
     python scripts/artifact-check.py --fixtures fixtures/
 
+.expect format (artifact fixtures, one file per case dir):
+    line 1:  pass | fail -- the expected validation outcome
+    line 2+: err=<substring> -- optional; each must appear in one of the
+             reported error lines (per-error-class assertions: a single
+             silent check regression can no longer hide behind other errors)
+
 Pure standard library; zero third-party dependencies.
 Exit codes: 0 = all pass, 1 = any failure.
 """
@@ -72,7 +78,10 @@ def check_gate_exemptions(task_text, decl_text, errs, where):
     artifacts must have a matching declaration in the spec/intent Gate
     exemptions section. Full-text scan (not just T-lines) so the 🟡 intent
     channel -- which has no T-lines -- cannot escape the pairing check.
-    Declaration lines themselves are always in `declared`, so they self-satisfy."""
+    decl_text source: the 🔴 spec is scanned in full; the 🟡 intent only in
+    its `## Gate Exemptions` section -- a full-intent scan would let every
+    usage self-declare (usage and declaration share one text) and the
+    pairing check would be vacuous (fixed v2.2.7)."""
     declared = set(GATE_NA_RE.findall(decl_text))
     body = without_sections(task_text, {"Deferred", "Review"})
     for line in body.splitlines():
@@ -139,7 +148,10 @@ def validate_task_dir(d):
                 errs.append(f"{d}/intent.md: missing '{field}' line")
         check_task_file(intent, set(), errs, f"{d}/intent.md")
         check_review(intent, errs, f"{d}/intent.md")
-        check_gate_exemptions(intent, intent, errs, f"{d}/intent.md")
+        # 🟡 declarations must live in the ## Gate Exemptions section: scanning
+        # the full intent would let every usage self-declare (usage and
+        # declaration share one text), making the pairing check vacuous.
+        check_gate_exemptions(intent, section(intent, "Gate Exemptions"), errs, f"{d}/intent.md")
     else:
         errs.append(f"{d}: no spec.md (full channel) or intent.md (standard channel) found")
     return errs
@@ -158,18 +170,23 @@ def run_fixtures(fixdir):
             # find-skill probe) -- skip quietly instead of crashing.
             print(f"[SKIP] {case.name}: no .expect (not an artifact fixture)")
             continue
-        expect = expect_file.read_text(encoding="utf-8").strip()
+        lines = [l.strip() for l in expect_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+        expect = lines[0] if lines else ""
+        want_errs = [l[len("err="):] for l in lines[1:] if l.startswith("err=")]
         specs = case / "specs"
         errs = []
         if specs.is_dir():
             for task_dir in sorted(p for p in specs.iterdir() if p.is_dir()):
                 errs.extend(validate_task_dir(task_dir))
         passed = not errs
-        ok = passed == (expect == "pass")
+        missing = [w for w in want_errs if not any(w in e for e in errs)]
+        ok = passed == (expect == "pass") and not missing
         label = "PASS" if ok else "FAIL"
         print(f"[{label}] fixture {case.name} (expect {expect}, got {'pass' if passed else 'fail'})")
         for e in errs:
             print(f"       - {e}")
+        for w in missing:
+            print(f"       - expected error substring not reported: {w}")
         if not ok:
             failures.append(case.name)
     if failures:

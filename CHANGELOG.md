@@ -5,6 +5,24 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.7 — 2026-11-16
+
+Review-driven self-consistency pass: the 2026-11-16 per-file review (27 files, all validation scripts re-run) surfaced 4 P2 gaps — all in the validator's own safety net, none in the methodology itself.
+
+### Fixed
+
+- **Exemption-section shape (3 files)**: the v2.2.5 normalization placed `## Gate Exemptions` before `Non-goals:` in the spec template and the gate-na fixture, structurally absorbing Non-goals into the section — both reordered (Non-goals first, exemptions last). The repo's own 🔴 sample `specs/dod-closure/spec.md` still used the pre-normalization inline `Gate Exemptions:` label — normalized to the `## Gate Exemptions` heading (the sample is the copy source future users will actually reach for)
+- **Stale debt item**: dod-closure `D1` (multi-turn continuation drill) was completed as the v2.2.5 same-chain append (T7–T9, AC-9) but left unchecked — now checked off with a completion annotation
+- **Fixture assertion granularity**: `.expect` gains optional `err=<substring>` lines, each required to appear in one of the reported error lines — `broken` now asserts all 5 error classes (6 error lines). Previously the case asserted only overall pass/fail, so a single silent check regression could hide behind other errors
+- **🟡 pairing check was vacuous (real bug, found by the new fixture on its first run)**: for the intent channel, `check_gate_exemptions` scanned the full intent for declarations — the same text the usages live in, so every `GATE-NA(<gate>)` usage auto-declared itself and the pairing check could never fire (the v2.0.3 "full-text scan" fix widened the usage scan but left declarations unscoped). Intent declarations are now scoped to the `## Gate Exemptions` section. Two fixtures close the coverage gap symmetrically: `broken-intent-na` (undeclared usage → must error) and `intent-gate-na` (declared usage → must pass)
+
+### Changed
+
+- README: fixture count 5 → 7（输出计数 8 = 7 用例 + 1 个跳过的探针目录）; fixtures line notes the `err=` assertion format
+- SDD-REFACTOR-DESIGN.md §11.3: fixture table synced (gate-na / broken-intent-na rows, per-error-class note, probe-fixtures note)
+- New chain `specs/review-hardening/` (spec/plan/tasks) records this pass as a real 🔴 sample; dod-closure stays as the DoD-closure historical chain (AC-8 carries a supersede annotation for the count change)
+- SKILL.md `version: 2.2.7`
+
 ## v2.2.6 — 2026-11-03
 
 Full-sweep fixes: layered-loading budget compliance + orphaned L3 template.
