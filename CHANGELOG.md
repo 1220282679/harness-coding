@@ -5,6 +5,19 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.0 — 2026-11-16
+
+Adds the release mechanism the v2.2.9 .gitignore comment promised: one command packages the repo into a slim, installable skill bundle; dev-only files can never leak.
+
+### Added
+
+- **scripts/build-dist.py** (pure stdlib): allowlist copy of the runtime surface (SKILL.md + references/** + the three runtime scripts + LICENSE) into `dist/harness-coding/`, a byte-identical verification pass (every file compared to source; missing/extra tree check), and a reproducible release zip `dist/harness-coding-v<version>.zip` (version from SKILL.md frontmatter; fixed zip timestamps and forward-slash entries — two builds of the same tree produce the same sha256; `--no-zip` to skip). Safety: only `dist/harness-coding/` is ever cleaned, `--out` must resolve inside the repo, and the packager excludes itself — the blast radius of a misdirected `--out` is a stray subdir, not lost source. Prints the per-harness install paths on success
+- dogfood chain `specs/dist-packaging/` — the third 🔴 sample under continuous artifact-check validation (specs/ now validates 3 chains)
+
+### Changed
+
+- SKILL.md `version: 2.3.0`; README install section documents the build command and the directory tree lists the new script
+
 ## v2.2.9 — 2026-11-16
 
 Closes the three consciously-open edge cases from v2.2.8 (review-hardening Deferred D2) — the probe's short-query filter, the exit-2 diagnosis, and the stale .gitignore comment. Each fixed as observed, none as invented.

@@ -64,12 +64,21 @@ harness-coding/
 ├── scripts/
 │   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫 / Gate N/A 配对）
 │   ├── derive-report.py            # 按需追溯视图（merge-base 基线，stdout，永不落盘）
-│   └── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警 + junction 同源去重）
+│   ├── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警 + junction 同源去重）
+│   └── build-dist.py               # 发布打包（allowlist 精简副本 + 字节级自校验 + 可复现 zip → dist/）
 ├── specs/                          # dogfood 产物链（dod-closure / review-hardening）——artifact-check.py specs/ 持续校验的真实 🔴 样本
 └── fixtures/                       # 产物校验用例 7 个（含故意损坏的 broken / broken-intent-na、合法豁免的 gate-na / intent-gate-na；.expect 支持逐错误类断言）+ 探针自检用例 4 个（short-query 回归 2 字符词过滤修复）
 ```
 
 ## 安装
+
+从本仓库构建精简安装包（推荐）：
+
+```bash
+python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-coding-v<version>.zip
+```
+
+把 `dist/harness-coding/` 整体复制（或软链）到下表任一技能目录即可。打包为 **allowlist 白名单制**：只含运行面（SKILL.md / references/ / 三个运行脚本 / LICENSE），dev 文件（README / CHANGELOG / fixtures / specs / 设计文档）不会混入；构建自带字节级自校验，zip 可复现。
 
 | Harness | 路径 |
 |---------|------|

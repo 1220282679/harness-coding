@@ -1,0 +1,15 @@
+# dist-packaging tasks
+- [x] T1 (AC-1, AC-4): implement scripts/build-dist.py — allowlist copy (SKILL.md, LICENSE, references/**, runtime scripts) + manifest; verify: python scripts/build-dist.py --no-zip; Output: exit 0 — "OK dist verified: 18 files, 92535 bytes"; bundle top level = LICENSE/SKILL.md/references/scripts only; find for README/CHANGELOG/SDD/*.expect/build-dist.py/opencode.json in bundle → 0 hits
+- [x] T2 (AC-2): byte-identical self-verification inside the build (per-file source comparison + missing/extra tree check); verify: python scripts/build-dist.py; Output: exit 0 — verification pass clean (18/18 byte-identical, no missing/extra); guards proven: `--out .` → exit 1 "must be a directory inside the repo", `--out /tmp/x` → exit 1
+- [x] T3 (AC-3): release zip named from SKILL.md frontmatter version, forward-slash entries, fixed timestamps; verify: python scripts/build-dist.py + sha256 twice; Output: "OK release zip: harness-coding-v2.3.0.zip"; 18 entries, backslash: False; two consecutive builds → same sha256 prefix c0332b423e54ca72 (reproducible)
+- [x] T4 (AC-5): both fixture suites + specs validation + bundle-script smoke; verify: artifact-check --fixtures / find-skill --fixtures / artifact-check specs/ / dist copy of artifact-check; Output: "PASS fixtures: 7 artifact cases matched expectations (1 non-artifact dir skipped)"; probe 4/4 PASS; specs/ PASS 3 chains (dist-packaging FAILed pre-tasks.md as expected — validator caught the incomplete chain; the dist/ copy of artifact-check.py reproduces the identical failure, proving the shipped script works)
+- [x] T5 (AC-6): version bump + docs; verify: grep version SKILL.md / CHANGELOG head / README install section; Output: SKILL.md "version: 2.3.0"; CHANGELOG v2.3.0 entry (Added: build-dist.py + dogfood chain; Changed: version + README); README 安装 section documents `python scripts/build-dist.py` and the tree lists the script
+
+## Deferred
+- [ ] D1: CI workflow to build the zip on tag push and attach it to a GitHub release — suggested follow-up when GitHub Actions is wanted
+
+## Review
+- R1 [resolved]: (blocker, design review) the first draft cleaned the whole --out directory via rmtree — a misdirected --out (e.g. `--out scripts`) would have destroyed source; fixed by cleaning only <out>/harness-coding/ and rejecting --out outside the repo / at the repo root (blast radius now a stray subdir at worst)
+- R2 [resolved]: (major) zip entries were built from WindowsPath str() — backslash separators break extraction on unix; fixed with relative_to().as_posix(), guarded by a backslash assertion in AC-3 evidence
+- R3 [resolved]: (minor) zip mtimes defaulted to file times, making release artifacts non-reproducible; fixed with fixed ZipInfo timestamps (1980-01-01) — two builds now hash identically
+- R4 [open|minor]: the manifest prints sizes but no content hashes, so a consumer cannot verify a zip against the manifest without rebuilding; acceptable for now (the build is reproducible, which covers verification by reconstruction); suggested follow-up with D1

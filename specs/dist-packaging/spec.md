@@ -1,0 +1,26 @@
+# dist-packaging spec
+
+Requirement: Add a release mechanism that packages the repo into a slim, installable skill bundle under dist/ — one command, self-verifying, pure stdlib — so a harness install never drags dev-only files along.
+
+Background: .gitignore has reserved dist/ since v2.2.9 ("slim install copy: SKILL.md + references/ + scripts/ + LICENSE") but the mechanism to produce it did not exist; installs today copy the whole repo (fixtures/specs/design docs included) or cherry-pick by hand. Install targets per README: Claude Code `.claude/skills/` (or `~/.claude/skills/`), opencode `.opencode/skills/` (or `~/.config/opencode/skills/`), Codex `.codex/skills/` (or `~/.codex/skills/`).
+
+Acceptance criteria:
+- AC-1: `python scripts/build-dist.py --no-zip` exits 0 and creates dist/harness-coding/ containing exactly the allowlisted runtime surface (SKILL.md, LICENSE, references/**, the three runtime scripts) with a printed manifest
+- AC-2: the build self-verifies — every bundle file byte-identical to its source, no missing/extra files; verification output pasted in T2
+- AC-3: the default run also produces dist/harness-coding-v<version>.zip with the version read from SKILL.md frontmatter; `--no-zip` skips it; zip entries use forward slashes and fixed timestamps (reproducible — two builds of the same tree produce the same sha256)
+- AC-4: dev-only files (README.md, CHANGELOG.md, SDD-REFACTOR-DESIGN.md, fixtures/, specs/, .claude/, opencode.json, build-dist.py itself) are all absent from the bundle
+- AC-5: `python scripts/artifact-check.py --fixtures fixtures` PASS (7 artifact cases) and `python scripts/artifact-check.py specs/` PASS (now 3 chains) at close-out
+- AC-6: SKILL.md `version: 2.3.0` + CHANGELOG entry; README documents the build command in the install section and the new script in the tree
+
+Assumptions:
+- A1: the bundle copies scripts/*.py wholesale minus build-dist.py itself — new runtime scripts are picked up automatically; the packager is not runtime surface
+- A2: README/CHANGELOG/design docs stay out of the bundle per the .gitignore comment's declared surface; repo browsing covers human-facing docs
+- A3: dist/ remains gitignored build output — the release artifact is the zip, not a git object
+
+Non-goals: no auto-install into harness skill directories (copy/link stays manual); no checksums manifest or GitHub release automation; no CI workflow (recorded as Deferred D1)
+
+## Gate Exemptions
+- GATE-NA(lint): repo defines no linter; the project-defined gates are the fixture suites — scope: chain-wide
+- GATE-NA(format): no formatter configured in this repo — scope: chain-wide
+- GATE-NA(type): stdlib-only scripts, no type checker configured; build correctness is covered by its own verification pass plus the fixture suites — scope: chain-wide
+- GATE-NA(test): no pytest suite; the test slot is fulfilled by the fixture suites plus the build's self-verification (AC-1/AC-2/AC-5), run in full at close-out — scope: chain-wide
