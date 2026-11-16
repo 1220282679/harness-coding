@@ -67,7 +67,7 @@ description: The filled-in adapter layer for the opencode harness (v2). Maps the
 
 ## 5. Permission Config for the Validation Scripts
 
-> The repo ships an `opencode.json` at the repo root with `permission.bash` allow patterns for `scripts/artifact-check.py` / `scripts/derive-report.py` (plus the `echo exit` exit-code readback) — the opencode equivalent of `.claude/settings.json` under Claude Code. When the skill is installed into a target project, declare the same allow patterns in that project's own config.
+> The repo ships an `opencode.json` at the repo root with `permission.bash` allow patterns for `scripts/artifact-check.py` / `scripts/derive-report.py` / `scripts/find-skill.py` (plus the `echo exit` exit-code readback) — the opencode equivalent of `.claude/settings.json` under Claude Code. When the skill is installed into a target project, declare the same allow patterns in that project's own config.
 
 ## 6. Capability-Contract Consistency Self-Check
 

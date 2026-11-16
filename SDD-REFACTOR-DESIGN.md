@@ -24,7 +24,7 @@ scope: v2.0.0 refactor proposal — protocol-driven → artifact-driven (SDD)
 - G1 SKILL.md 174 lines → ≤80 lines (including the §12 continuation protocol; completeness over the line-count number), token injection cut by half or more
 - G2 The reporting-protocol state machine deleted wholesale; traceability carried by artifacts + git
 - G3 The contract drops the heaviest `write_report` and the no-independent-value `run_quality_gate`, adds the thin-semantic optional capabilities `find_skill` / `web_search`; net 7 required + 5 optional (the point is not the count but that every capability is semantically trivial and every optional one has a degradation path)
-- G4 Validation scripts 1221 lines → ~150 lines (a single artifact validator)
+- G4 Validation scripts 1221 lines → ~150 lines (a single artifact validator) <!-- estimate; actual landing: three scripts ~550 lines (validator ~246 incl. per-class fixture assertions, probe ~201, view ~107) — scope grew with the probe and view added post-v2.0; annotated 2026-11-16 -->
 - G5 Tiered channels / capability contract / adapter layer kept as-is
 
 **Non-goals**
@@ -111,7 +111,7 @@ The five report sections are unbound before cancellation:
 | Remaining risks | unchecked tasks in tasks.md's "Deferred" section (risk becomes an actionable follow-up, not stale prose) |
 | Skill-usage log | deleted (harness-internal self-audit, no human consumer) |
 
-Readability remedy: the new `scripts/derive-report.py` (~40 lines) — one command when you want to see it, generating a traceable view to stdout from tasks.md + a branch-baseline diff on the fly; **never persisted, never maintained, never rots**. The diff baseline is `merge-base`, **not** the working-tree diff — after tasks are committed the working-tree diff is empty and the change list would be lost. Only state is stored (spec/tasks/git); display is always a projection. Boundaries: the 📋 channel's Findings/spec documents are the **product** (the deliverable itself) and stay; 🟢's inline summary is a chat message and is unaffected.
+Readability remedy: the new `scripts/derive-report.py` (~95 lines as shipped) — one command when you want to see it, generating a traceable view to stdout from tasks.md + a branch-baseline diff on the fly; **never persisted, never maintained, never rots**. The diff baseline is `merge-base`, **not** the working-tree diff — after tasks are committed the working-tree diff is empty and the change list would be lost. Only state is stored (spec/tasks/git); display is always a projection. Boundaries: the 📋 channel's Findings/spec documents are the **product** (the deliverable itself) and stay; 🟢's inline summary is a chat message and is unaffected.
 
 ### 5.2 Where role outputs land
 
@@ -173,7 +173,7 @@ The three `web_search` disciplines: results entering the spec must carry **sourc
 | `references/templates/` | add four micro-templates: `spec.md` / `plan.md` / `tasks.md` / `intent.md` |
 | `scripts/report_lib.py` / `smoke-report.py` / `consistency-check.py` | delete |
 | `scripts/workflow-check.py` | rewrite as `artifact-check.py` (~150 lines: artifact schema + tasks checks vs git state + AC reference integrity + Deferred section validation + Review open-blocker/major closing guard) |
-| `scripts/derive-report.py` | add (~40 lines: tasks.md + merge-base diff → traceable view to stdout, never persisted) |
+| `scripts/derive-report.py` | add (~95 lines as shipped: tasks.md + merge-base diff → traceable view to stdout, never persisted) |
 | `.claude/settings.json` / `opencode.json` | update allowlists: `artifact-check.py` / `derive-report.py` (replacing the old trio's entries) |
 | `README.md` / `CHANGELOG.md` | update in sync |
 

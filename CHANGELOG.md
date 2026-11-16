@@ -5,6 +5,26 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.8 — 2026-11-16
+
+P3 sweep from the 2026-11-16 review (the review-hardening chain's Deferred D1) — nine small consistency fixes; three edge cases consciously left open (see Left open).
+
+### Fixed
+
+- **derive-report 🟡 view**: intent chains no longer print "(no task entries)" — the view now shows the intent's `Verify:` command and each Intent Additions bullet as verification entries (review F5)
+- **Runner output wording**: `PASS fixtures: N artifact cases matched expectations (M non-artifact dir(s) skipped)` — skipped probe dirs are no longer counted as "matched" (review F13); README comment synced
+- **Comment-located exemptions don't count**: GATE-NA scanning now strips HTML comments on both sides (declarations and usages) — a commented-out declaration can no longer satisfy the pairing; `broken`'s spec gains a commented trap line and its `err=` assertion guards the regression (review F14a)
+- **Adapter/template doc drift** (review F7/F8/F9/F10): opencode §5 now lists the `find-skill.py` allowlist entry; claude-code adapter gains a "last verified" note (parity with codex/opencode); adapter template §4 gains the missing `find_skill` degradation row; the implementer dispatch's coverage line is now threshold-conditional ("never invent a number" parity)
+- **Stale estimates & tree** (review F6/F12): design doc G4 / §5.1 / §7 line-count estimates annotated with actuals (validator/probe/view ≈ 246/201/107); README directory tree now lists `specs/`; this entry also records the previously unlogged README Chinese translation (commit e17de01, after v2.2.0)
+
+### Left open (by design)
+
+- Probe short-query filtering (terms ≤ 2 chars dropped), exit 2/1 semantics for a root with no parseable SKILL.md, and the v1-era `harness-reports/` .gitignore entry (entangled with an unrelated uncommitted local change) — recorded in review-hardening Deferred as known limitations
+
+### Changed
+
+- SKILL.md `version: 2.2.8`
+
 ## v2.2.7 — 2026-11-16
 
 Review-driven self-consistency pass: the 2026-11-16 per-file review (27 files, all validation scripts re-run) surfaced 4 P2 gaps — all in the validator's own safety net, none in the methodology itself.

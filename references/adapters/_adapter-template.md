@@ -34,6 +34,7 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 | `spawn_agent` | fill-in (optional) | if missing, execute inline per the degradation rules |
 | `create_branch` | fill-in (optional) | if missing, mark "not isolated" |
 | `check_command` | fill-in (optional) | if missing, run once to decide |
+| `find_skill` | fill-in (optional) — context-first per SKILL.md §7; probe fallback `scripts/find-skill.py` | library absent → record `skill library unavailable` in spec Assumptions; no match → static conditional table (SKILL.md §7) |
 | `web_search` | fill-in (optional) | if missing → record `not verified online` in spec Assumptions |
 
 ## 2. Quality-Gate Commands (defined by the project)

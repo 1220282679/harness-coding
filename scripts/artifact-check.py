@@ -50,6 +50,12 @@ def without_sections(text, names):
     return "\n".join(out)
 
 
+def without_comments(text):
+    """HTML comments never count (v2.2.8): a commented-out exemption
+    declaration or usage is not an active one."""
+    return re.sub(r"<!--.*?-->", "", text, flags=re.S)
+
+
 def check_review(text, errs, where):
     body = section(text, "Review")
     for line in body.splitlines():
@@ -81,9 +87,11 @@ def check_gate_exemptions(task_text, decl_text, errs, where):
     decl_text source: the 🔴 spec is scanned in full; the 🟡 intent only in
     its `## Gate Exemptions` section -- a full-intent scan would let every
     usage self-declare (usage and declaration share one text) and the
-    pairing check would be vacuous (fixed v2.2.7)."""
-    declared = set(GATE_NA_RE.findall(decl_text))
-    body = without_sections(task_text, {"Deferred", "Review"})
+    pairing check would be vacuous (fixed v2.2.7). HTML comments are
+    stripped from both sides first (v2.2.8): commented-out declarations
+    and usages never count."""
+    declared = set(GATE_NA_RE.findall(without_comments(decl_text)))
+    body = without_sections(without_comments(task_text), {"Deferred", "Review"})
     for line in body.splitlines():
         for gate in GATE_NA_RE.findall(line):
             if gate not in GATES:
@@ -163,12 +171,14 @@ def run_fixtures(fixdir):
     if not cases:
         print(f"FAIL fixtures: no cases under {fixdir}")
         return 1
+    matched, skipped = 0, 0
     for case in cases:
         expect_file = case / ".expect"
         if not expect_file.exists():
             # Not an artifact-fixture case (e.g. fixtures/skills/ for the
             # find-skill probe) -- skip quietly instead of crashing.
             print(f"[SKIP] {case.name}: no .expect (not an artifact fixture)")
+            skipped += 1
             continue
         lines = [l.strip() for l in expect_file.read_text(encoding="utf-8").splitlines() if l.strip()]
         expect = lines[0] if lines else ""
@@ -189,10 +199,13 @@ def run_fixtures(fixdir):
             print(f"       - expected error substring not reported: {w}")
         if not ok:
             failures.append(case.name)
+        else:
+            matched += 1
     if failures:
         print(f"FAIL fixtures: mismatched cases: {', '.join(failures)}")
         return 1
-    print(f"PASS fixtures: {len(cases)} cases matched expectations")
+    print(f"PASS fixtures: {matched} artifact cases matched expectations "
+          f"({skipped} non-artifact dir{'s' if skipped != 1 else ''} skipped)")
     return 0
 
 

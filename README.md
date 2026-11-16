@@ -65,6 +65,7 @@ harness-coding/
 │   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫 / Gate N/A 配对）
 │   ├── derive-report.py            # 按需追溯视图（merge-base 基线，stdout，永不落盘）
 │   └── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警 + junction 同源去重）
+├── specs/                          # dogfood 产物链（dod-closure / review-hardening）——artifact-check.py specs/ 持续校验的真实 🔴 样本
 └── fixtures/                       # 产物校验用例 7 个（含故意损坏的 broken / broken-intent-na、合法豁免的 gate-na / intent-gate-na；.expect 支持逐错误类断言）+ 探针自检用例 3 个
 ```
 
@@ -81,7 +82,7 @@ harness-coding/
 ## 验证
 
 ```bash
-python scripts/artifact-check.py --fixtures fixtures/   # 7 个产物用例全部符合预期（broken / broken-intent-na 预期报错；输出计数 8 = 7 用例 + 1 个跳过的探针目录）
+python scripts/artifact-check.py --fixtures fixtures/   # 7 个产物用例全部符合预期（broken / broken-intent-na 预期报错；另有 1 个非产物探针目录跳过）
 python scripts/find-skill.py --fixtures fixtures/skills # 探针自测（drift / no-drift / empty）
 python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
 python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）

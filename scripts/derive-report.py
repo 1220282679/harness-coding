@@ -59,7 +59,9 @@ def main(argv=None):
 
     spec = read(d / "spec.md")
     intent = read(d / "intent.md")
-    tasks = read(d / "tasks.md") or intent
+    tasks_path = d / "tasks.md"
+    using_intent = not tasks_path.exists()
+    tasks = read(tasks_path) or intent
 
     print(f"# Traceable view: {d.name}")
     print("\n## Requirement")
@@ -78,6 +80,16 @@ def main(argv=None):
 
     print("\n## Verification Results")
     task_lines = [l.strip() for l in tasks.splitlines() if re.match(r"\s*- \[[ x]\]\s*T\d+", l)]
+    if not task_lines and using_intent:
+        # 🟡 intent chains carry no T-lines (v2.2.8): show the intent's
+        # verify command and Intent Additions bullets instead of "(no task entries)".
+        verify = field(intent, "Verify")
+        if verify:
+            task_lines.append(f"intent verify: {verify}")
+        for l in section(intent, "Intent Additions").splitlines():
+            l = l.strip()
+            if l.startswith("- "):
+                task_lines.append(f"intent addition: {l[2:]}")
     if task_lines:
         for l in task_lines:
             print(f"- {l}")

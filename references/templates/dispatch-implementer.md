@@ -47,7 +47,7 @@ After reading the artifacts, read same-layer same-shape files and their tests to
 - format: <pass/fail summary>
 - type: <pass/fail summary>
 - test: <passed count/failed count; paste key errors on failure>
-- coverage: <percentage of the module under test> (threshold value; list file:line gaps in branches)
+- coverage: <report only when the project declares a threshold (adapter §2 gate table); otherwise state "no threshold declared -- pass/fail only"; when reported, list file:line gaps in branches>
 
 ## Self-Test Checklist (confirm each item before submitting)
 - [ ] Layering direction correct (domain zero framework / infra only implements ports & repositories)

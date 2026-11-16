@@ -6,6 +6,8 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 # Adapter Layer: Claude Code
 
 > The filled-in adapter for the Claude Code execution harness. The methodology body (SKILL.md) and the capability contract stay unchanged; this file answers exactly one question: **what concrete Claude Code mechanism implements each capability in the contract**.
+>
+> **Version note**: tool names verified against Claude Code as of **2026-11-16**. The authoritative set is the live tool catalogue of the current session — never assume a tool exists without confirming.
 
 ---
 
