@@ -1,0 +1,38 @@
+name: release
+
+# dist-packaging D1 (AC-7): tag push builds the release zip and attaches it
+# to the tag's GitHub Release. Runs the same locally-verifiable commands as
+# the repo's own gates: the fixture suites + specs validation, then the
+# self-verifying reproducible build (build-dist.py).
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Release gates (fixture suites + specs validation)
+        run: |
+          python scripts/artifact-check.py --fixtures fixtures/
+          python scripts/find-skill.py --fixtures fixtures/skills/
+          python scripts/artifact-check.py specs/
+
+      - name: Build bundle (self-verifying, reproducible zip)
+        run: python scripts/build-dist.py
+
+      - name: Attach zip to the tag's GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/harness-coding-v*.zip

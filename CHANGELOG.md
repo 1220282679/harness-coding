@@ -5,6 +5,20 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.2 — 2026-11-16
+
+Discharges the repo's last consciously-open Deferred item: dist-packaging D1, the tag-push release CI. The workflow runs the exact commands the repo already validates by hand — no new tooling, no secrets.
+
+### Added
+
+- **`.github/workflows/release.yml`**: on `v*` tag push — fixture gates (artifact-check 8 cases + find-skill 4 cases) + specs validation, then the self-verifying reproducible build (`python scripts/build-dist.py`), then the zip is attached to the tag's GitHub Release via softprops/action-gh-release@v2 (`permissions: contents: write`). The bundle allowlist already excludes `.github/` — dev files cannot leak into the release artifact
+- dist-packaging chain reopened per §12: AC-7 appended (append-only), T6 landed, Deferred D1 checked off
+
+### Changed
+
+- SKILL.md `version: 2.3.2`; README install section documents the GitHub Releases download path
+- dist-packaging spec Non-goals carries a supersede annotation for the retired "no CI workflow" clause
+
 ## v2.3.1 — 2026-11-16
 
 Fixes the two actionable issues from the 2026-11-16 external scan (the scan's other findings are consciously-recorded open items in their own chains): one stale cross-reference and one validator blind spot. Lands as the first 🟡 dogfood chain under specs/ (`scan-fixes`).

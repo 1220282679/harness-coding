@@ -78,6 +78,8 @@ harness-coding/
 python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-coding-v<version>.zip
 ```
 
+不想本地构建也可以直接从 GitHub Releases 下载 zip：推送 `v*` tag 时 CI 自动跑同样的门禁并构建发布（`.github/workflows/release.yml`）。
+
 把 `dist/harness-coding/` 整体复制（或软链）到下表任一技能目录即可。打包为 **allowlist 白名单制**：只含运行面（SKILL.md / references/ / 三个运行脚本 / LICENSE），dev 文件（README / CHANGELOG / fixtures / specs / 设计文档）不会混入；构建自带字节级自校验，zip 可复现。
 
 | Harness | 路径 |

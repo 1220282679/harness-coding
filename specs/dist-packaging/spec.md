@@ -11,13 +11,14 @@ Acceptance criteria:
 - AC-4: dev-only files (README.md, CHANGELOG.md, SDD-REFACTOR-DESIGN.md, fixtures/, specs/, .claude/, opencode.json, build-dist.py itself) are all absent from the bundle
 - AC-5: `python scripts/artifact-check.py --fixtures fixtures` PASS (7 artifact cases) and `python scripts/artifact-check.py specs/` PASS (now 3 chains) at close-out
 - AC-6: SKILL.md `version: 2.3.0` + CHANGELOG entry; README documents the build command in the install section and the new script in the tree
+- AC-7: `.github/workflows/release.yml` triggers on `v*` tag push and runs the same locally-verifiable commands — fixture gates + specs validation, `python scripts/build-dist.py`, then the zip is attached to the tag's GitHub Release; locally executable check: those gate + build commands pass on this tree (the live tag-push run verifies the wiring)
 
 Assumptions:
 - A1: the bundle copies scripts/*.py wholesale minus build-dist.py itself — new runtime scripts are picked up automatically; the packager is not runtime surface
 - A2: README/CHANGELOG/design docs stay out of the bundle per the .gitignore comment's declared surface; repo browsing covers human-facing docs
 - A3: dist/ remains gitignored build output — the release artifact is the zip, not a git object
 
-Non-goals: no auto-install into harness skill directories (copy/link stays manual); no checksums manifest or GitHub release automation; no CI workflow (recorded as Deferred D1)
+Non-goals: no auto-install into harness skill directories (copy/link stays manual); no checksums manifest or GitHub release automation; no CI workflow (recorded as Deferred D1) <!-- superseded 2026-11-16: the CI follow-up landed as AC-7/T6 (append-only per §12) -->
 
 ## Gate Exemptions
 - GATE-NA(lint): repo defines no linter; the project-defined gates are the fixture suites — scope: chain-wide
