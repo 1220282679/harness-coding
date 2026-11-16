@@ -24,7 +24,7 @@ scope: v2.0.0 refactor proposal — protocol-driven → artifact-driven (SDD)
 - G1 SKILL.md 174 lines → ≤80 lines (including the §12 continuation protocol; completeness over the line-count number), token injection cut by half or more
 - G2 The reporting-protocol state machine deleted wholesale; traceability carried by artifacts + git
 - G3 The contract drops the heaviest `write_report` and the no-independent-value `run_quality_gate`, adds the thin-semantic optional capabilities `find_skill` / `web_search`; net 7 required + 5 optional (the point is not the count but that every capability is semantically trivial and every optional one has a degradation path)
-- G4 Validation scripts 1221 lines → ~150 lines (a single artifact validator) <!-- estimate; actual landing: three scripts ~550 lines (validator ~246 incl. per-class fixture assertions, probe ~201, view ~107) — scope grew with the probe and view added post-v2.0; annotated 2026-11-16 -->
+- G4 Validation scripts 1221 lines → ~150 lines (a single artifact validator) <!-- estimate; actual landing: three scripts ~575 lines (validator ~246 incl. per-class fixture assertions, probe ~222 incl. short-query fix, view ~107) — scope grew with the probe and view added post-v2.0; annotated 2026-11-16, probe figure updated v2.2.9 -->
 - G5 Tiered channels / capability contract / adapter layer kept as-is
 
 **Non-goals**

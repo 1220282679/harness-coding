@@ -5,6 +5,21 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.2.9 — 2026-11-16
+
+Closes the three consciously-open edge cases from v2.2.8 (review-hardening Deferred D2) — the probe's short-query filter, the exit-2 diagnosis, and the stale .gitignore comment. Each fixed as observed, none as invented.
+
+### Fixed
+
+- **Probe short-query filter** (D2a): match terms of length >= 2 are kept ("go"/"py" are real skill names; the old `len(t) > 2` silently dropped them); if every term is filtered out but the query is non-empty, the raw query is used as a single term so 1-char queries still match. New probe fixture `short-query` proves the regression: a library findable only via its 2-char name returns exit 1 under the old filter, exit 0 now; probe `.expect` supports a per-case `query=` override
+- **Exit-2 diagnosis split** (D2b): "no library found at all" and "N root(s) present but no parseable SKILL.md" now print distinct messages (exit code stays 2 — no usable library either way, so the fallback contract is unchanged); the operator can tell a missing library from a broken layout/frontmatter
+- **Stale .gitignore comment** (D2c): the `harness-reports/` entry is kept but its comment no longer cites the removed v1 `report.dir` config — it now states the design-doc fact (v1 reports archived, unmigrated by design) and the removal condition; the unrelated uncommitted local `dist/` addition is untouched by this commit
+
+### Changed
+
+- SKILL.md `version: 2.2.9`; README probe-fixture count 3 → 4
+- review-hardening Deferred D2 checked off (T15–T18)
+
 ## v2.2.8 — 2026-11-16
 
 P3 sweep from the 2026-11-16 review (the review-hardening chain's Deferred D1) — nine small consistency fixes; three edge cases consciously left open (see Left open).

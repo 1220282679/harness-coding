@@ -99,8 +99,19 @@ def scan_roots(roots):
 
 
 def match(library, query):
-    """Score entries against query terms; return [(score, entry)] desc."""
-    terms = [t for t in re.split(r"\W+", query.lower()) if len(t) > 2]
+    """Score entries against query terms; return [(score, entry)] desc.
+
+    Terms of length >= 2 are kept (2-char terms like "go"/"py" are real
+    skill names); only empty splits are dropped. If every term was
+    filtered out but the query is non-empty, fall back to the raw query
+    as a single term so 1-char queries still match (fixed v2.2.9: the old
+    len(t) > 2 filter silently dropped short queries entirely).
+    """
+    terms = [t for t in re.split(r"\W+", query.lower()) if t]
+    if not any(len(t) >= 2 for t in terms) and terms:
+        terms = [query.lower().strip()]
+    else:
+        terms = [t for t in terms if len(t) >= 2]
     scored = []
     for entries in library.values():
         for e in entries:
@@ -136,11 +147,19 @@ def print_hits(scored):
 
 
 def run(query, roots):
-    library, _ = scan_roots(roots)
+    library, locations_seen = scan_roots(roots)
     for w in drift_warnings(library):
         print(w, file=sys.stderr)
     if not library:
-        print("no skill library found in any standard location", file=sys.stderr)
+        if locations_seen:
+            # Roots exist but hold no parseable SKILL.md -- distinct from
+            # "no library at all" so the operator knows where to look
+            # (exit code stays 2: no usable library either way).
+            print(f"{locations_seen} skill-library root(s) present but no "
+                  "parseable SKILL.md in any of them -- check dir layout "
+                  "(<skill>/SKILL.md) and frontmatter", file=sys.stderr)
+        else:
+            print("no skill library found in any standard location", file=sys.stderr)
         return 2
     scored = match(library, query)
     if not scored:
@@ -152,7 +171,8 @@ def run(query, roots):
 
 def run_fixtures(fixtures_dir):
     """Self-test: each case dir holds synthetic library roots + .expect
-    (lines: exit=<0|1|2>, optional drift=warn|none)."""
+    (lines: exit=<0|1|2>, optional drift=warn|none, optional query=<terms>
+    overriding the default FIXTURE_QUERY)."""
     ok = True
     for case in sorted(p for p in fixtures_dir.iterdir() if p.is_dir()):
         expect = {}
@@ -163,11 +183,12 @@ def run_fixtures(fixtures_dir):
                     k, v = line.split("=", 1)
                     expect[k.strip()] = v.strip()
         roots = [str(d) for d in sorted(case.iterdir()) if d.is_dir()]
+        query = expect.get("query", FIXTURE_QUERY)
         library, _ = scan_roots(roots)
         warns = drift_warnings(library)
         if not library:
             code = 2
-        elif match(library, FIXTURE_QUERY):
+        elif match(library, query):
             code = 0
         else:
             code = 1
