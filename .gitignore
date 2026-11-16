@@ -10,3 +10,6 @@ harness-reports/
 # Python bytecode caches (e.g. scripts/__pycache__)
 __pycache__/
 *.py[cod]
+
+# Distribution bundle (slim install copy: SKILL.md + references/ + scripts/ + LICENSE)
+dist/
