@@ -11,6 +11,7 @@ Semantics (exit codes):
   0 = hit(s) found
   1 = library present, no match -> use the static conditional table (SKILL.md §7)
   2 = no skill library found at all -> record `skill library unavailable`
+  3 = --fixtures self-test mode only: at least one fixture case failed
 
 Drift detection: the same skill `name` found in multiple locations with
 different `version` values is reported as a DRIFT warning on stderr -- trust

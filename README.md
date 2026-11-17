@@ -57,6 +57,8 @@ lint → format → type → test
 harness-coding/
 ├── SKILL.md                        # 方法论主体（v2）
 ├── SDD-REFACTOR-DESIGN.md          # v2 重构设计文档（已冻结）
+├── .github/
+│   └── workflows/release.yml       # tag 发布 CI（门禁 + 可复现构建 + zip 附到 Release）
 ├── references/
 │   ├── capability-contract.md      # 能力契约（7 必需 + 5 可选）
 │   ├── adapters/                   # 适配器层（claude-code / codex / opencode / _template）
@@ -67,7 +69,7 @@ harness-coding/
 │   ├── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警 + junction 同源去重）
 │   └── build-dist.py               # 发布打包（allowlist 精简副本 + 字节级自校验 + 可复现 zip → dist/）
 ├── specs/                          # dogfood 产物链（dod-closure / review-hardening / dist-packaging / scan-fixes🟡）——artifact-check.py specs/ 持续校验的真实样本
-└── fixtures/                       # 产物校验用例 8 个（含故意损坏的 broken / broken-intent-na / malformed-task、合法豁免的 gate-na / intent-gate-na；.expect 支持逐错误类断言）+ 探针自检用例 4 个（short-query 回归 2 字符词过滤修复）
+└── fixtures/                       # 产物校验用例 9 个（含故意损坏的 broken / broken-intent-na / malformed-task、合法豁免的 gate-na / intent-gate-na、注释 AC 的 comment-ac；.expect 支持逐错误类断言）+ 探针自检用例 4 个（short-query 回归 2 字符词过滤修复）
 ```
 
 ## 安装
@@ -88,12 +90,12 @@ python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-codin
 | opencode | `<project>/.opencode/skills/harness-coding/`（或 `~/.config/opencode/skills/`） |
 | Codex | `<project>/.codex/skills/harness-coding/`（或 `~/.codex/skills/`） |
 
-> 权限：宿主项目需放行 `python scripts/artifact-check.py*` 与 `python scripts/derive-report.py*`（参见本仓库的 `.claude/settings.json` / `opencode.json`）。
+> 权限：宿主项目需放行 `python scripts/artifact-check.py*`、`python scripts/derive-report.py*` 与 `python scripts/find-skill.py*`（参见本仓库的 `.claude/settings.json` / `opencode.json`——三者的放行清单一致）。
 
 ## 验证
 
 ```bash
-python scripts/artifact-check.py --fixtures fixtures/   # 8 个产物用例全部符合预期（broken / broken-intent-na / malformed-task 预期报错；另有 1 个非产物探针目录跳过）
+python scripts/artifact-check.py --fixtures fixtures/   # 9 个产物用例全部符合预期（broken / broken-intent-na / malformed-task 预期报错；另有 1 个非产物探针目录跳过）
 python scripts/find-skill.py --fixtures fixtures/skills # 探针自测（drift / no-drift / empty / short-query；.expect 支持 query= 覆盖）
 python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
 python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）

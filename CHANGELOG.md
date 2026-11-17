@@ -5,6 +5,26 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.3 — 2026-11-17
+
+Second scan-fixes round (same 🟡 chain, §12 append): the five actionable findings from the 2026-11-17 external scan. The scan's sixth finding (CI action SHA pinning) is consciously left open — see Deferred D1.
+
+### Fixed
+
+- **Permission-hint script drift** (README install note + build-dist.py closing output): both hints listed only `artifact-check.py` and `derive-report.py` while `.claude/settings.json` / `opencode.json` actually allow three scripts — `find-skill.py` was missing; same drift class as the v2.2.8 opencode-adapter fix (review F7). Both hints now list all three and point to the config files as the source of truth
+- **Commented-out ACs no longer count** (artifact-check.py): AC extraction ran `AC_RE` over the raw spec text, so AC lines inside a multi-line HTML comment block were collected as declared ACs and then flagged "is not covered by any task" — a comment is not a requirement. AC extraction now strips HTML comments first (the `without_comments` helper from the v2.2.8 GATE-NA fix — symmetric with it). New fixture `comment-ac` pins the regression (expect pass; under the old code it fails with the false "is not covered" errors on the commented AC-2/AC-3). Side effect (accepted, comment-ac R1): a task citing a commented AC now errors "references unknown AC-\<n\>" — desired strictness, same shape as the v2.3.1 malformed-line guard
+- **Exit-code table incomplete** (find-skill.py docstring): exit 3 (`--fixtures` self-test failure) was returned but never documented — added
+- **Validator error paths mixed separators** (artifact-check.py): on Windows the errors read `fixtures\broken\specs\broken/tasks.md` — `validate_task_dir` now normalizes paths via `as_posix()`
+- **Docs drift**: README directory tree was missing `.github/workflows/release.yml` (added v2.3.2, mentioned in prose only); README fixture counts 8 → 9 (tree comment + verification block); design doc §11.3 fixture table gains the `comment-ac` row
+
+### Left open (by design)
+
+- `release.yml` pins actions by floating major tag instead of commit SHA — the SHAs cannot be verified offline and a wrong SHA breaks tag-push releases; recorded in scan-fixes Deferred D1 with the adoption condition (pin at the next release cut, verified against upstream)
+
+### Changed
+
+- SKILL.md `version: 2.3.3`; specs/scan-fixes gains its first Intent Additions paragraph (the §12 continuation drill now has a second real round)
+
 ## v2.3.2 — 2026-11-16
 
 Discharges the repo's last consciously-open Deferred item: dist-packaging D1, the tag-push release CI. The workflow runs the exact commands the repo already validates by hand — no new tooling, no secrets.

@@ -141,38 +141,44 @@ def check_task_file(text, spec_acs, errs, where):
 
 def validate_task_dir(d):
     errs = []
+    w = d.as_posix()  # normalize separators (Windows backslashes mixed with '/' otherwise)
     if not SLUG_RE.match(d.name):
-        errs.append(f"{d}: slug '{d.name}' must be lowercase kebab-case")
+        errs.append(f"{w}: slug '{d.name}' must be lowercase kebab-case")
     names = {p.name for p in d.iterdir() if p.is_file()}
     if "spec.md" in names:
         spec = (d / "spec.md").read_text(encoding="utf-8")
         if not re.search(r"^Requirement:", spec, re.M):
-            errs.append(f"{d}/spec.md: missing 'Requirement:' line")
-        spec_acs = set(AC_RE.findall(spec))
+            errs.append(f"{w}/spec.md: missing 'Requirement:' line")
+        # ACs live in HTML comments don't count (v2.3.3, symmetric with the
+        # v2.2.8 GATE-NA comment-stripping): a commented-out AC block
+        # (multi-line <!-- ... --> with AC lines on their own lines) used to
+        # be collected as a declared AC and then flagged "not covered by
+        # any task" -- a comment is not a requirement.
+        spec_acs = set(AC_RE.findall(without_comments(spec)))
         if not spec_acs:
-            errs.append(f"{d}/spec.md: no acceptance criteria (AC-n) found")
+            errs.append(f"{w}/spec.md: no acceptance criteria (AC-n) found")
         for req in ("plan.md", "tasks.md"):
             if req not in names:
-                errs.append(f"{d}: full channel requires {req}")
+                errs.append(f"{w}: full channel requires {req}")
         if "tasks.md" in names:
             tasks_text = (d / "tasks.md").read_text(encoding="utf-8")
-            if not check_task_file(tasks_text, spec_acs, errs, f"{d}/tasks.md"):
-                errs.append(f"{d}/tasks.md: no task lines found")
-            check_review(tasks_text, errs, f"{d}/tasks.md")
-            check_gate_exemptions(tasks_text, spec, errs, f"{d}/tasks.md")
+            if not check_task_file(tasks_text, spec_acs, errs, f"{w}/tasks.md"):
+                errs.append(f"{w}/tasks.md: no task lines found")
+            check_review(tasks_text, errs, f"{w}/tasks.md")
+            check_gate_exemptions(tasks_text, spec, errs, f"{w}/tasks.md")
     elif "intent.md" in names:
         intent = (d / "intent.md").read_text(encoding="utf-8")
-        for field in ("Intent:", "Verify:"):
-            if not re.search(rf"^{field}", intent, re.M):
-                errs.append(f"{d}/intent.md: missing '{field}' line")
-        check_task_file(intent, set(), errs, f"{d}/intent.md")
-        check_review(intent, errs, f"{d}/intent.md")
+        for field_name in ("Intent:", "Verify:"):
+            if not re.search(rf"^{field_name}", intent, re.M):
+                errs.append(f"{w}/intent.md: missing '{field_name}' line")
+        check_task_file(intent, set(), errs, f"{w}/intent.md")
+        check_review(intent, errs, f"{w}/intent.md")
         # 🟡 declarations must live in the ## Gate Exemptions section: scanning
         # the full intent would let every usage self-declare (usage and
         # declaration share one text), making the pairing check vacuous.
-        check_gate_exemptions(intent, section(intent, "Gate Exemptions"), errs, f"{d}/intent.md")
+        check_gate_exemptions(intent, section(intent, "Gate Exemptions"), errs, f"{w}/intent.md")
     else:
-        errs.append(f"{d}: no spec.md (full channel) or intent.md (standard channel) found")
+        errs.append(f"{w}: no spec.md (full channel) or intent.md (standard channel) found")
     return errs
 
 
@@ -242,7 +248,7 @@ def main(argv):
             continue
         for td in task_dirs:
             errs = validate_task_dir(td)
-            print(f"[{'PASS' if not errs else 'FAIL'}] {td}")
+            print(f"[{'PASS' if not errs else 'FAIL'}] {td.as_posix()}")
             all_errs.extend(errs)
     for e in all_errs:
         print(f"  - {e}")

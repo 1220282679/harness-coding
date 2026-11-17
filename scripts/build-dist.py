@@ -186,8 +186,9 @@ def main(argv=None):
     print("\ninstall: copy or link the bundle dir into a skills directory --")
     for harness, path in INSTALL_HINTS:
         print(f"  {harness}: {path}")
-    print("host project: allow 'python scripts/artifact-check.py*' and "
-          "'python scripts/derive-report.py*' (see README)")
+    print("host project: allow 'python scripts/artifact-check.py*', "
+          "'python scripts/derive-report.py*' and 'python scripts/find-skill.py*' "
+          "(see README)")
     return 0
 
 

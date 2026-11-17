@@ -5,7 +5,11 @@ Verify: python scripts/artifact-check.py --fixtures fixtures/ && python scripts/
 
 ## Intent Additions
 <!-- multi-turn continuation (§12): new requirements of the same task chain append here, each with a verify command -->
-(none -- first pass)
+
+### 2026-11-17 second external scan (v2.3.3)
+
+Intent: Fix the five findings from the 2026-11-17 external scan -- (1) the permission hints in README (install note) and build-dist.py's closing output listed only artifact-check.py and derive-report.py while `.claude/settings.json` / `opencode.json` actually allow three scripts (find-skill.py missing) -- the same drift class v2.2.8 fixed in the opencode adapter (review F7); both hints now list all three and state the config files are the source of truth. (2) The README directory tree was missing `.github/workflows/release.yml` (added v2.3.2; mentioned in prose once, never in the tree). (3) artifact-check.py collected acceptance criteria from the raw spec text, so AC lines inside a multi-line HTML comment block were declared ACs and then flagged "not covered by any task" -- comment-stripping now applied to AC extraction (the without_comments helper from the v2.2.8 GATE-NA fix), symmetric with that fix; pinned by the new `comment-ac` fixture (expect pass; under the old code it fails with the false "is not covered" error on the commented AC-2/AC-3). (4) find-skill.py's docstring exit-code table omitted exit 3 (--fixtures self-test failure); documented. (5) Validator error paths mixed Windows backslashes with forward slashes (`fixtures\broken\specs\broken/tasks.md`) -- validate_task_dir now normalizes via as_posix(). The scan's sixth finding (release.yml pins actions by floating major tag instead of commit SHA) is NOT changed: the correct SHAs cannot be verified offline and a wrong SHA breaks the release CI; recorded as Deferred D1 with the adoption condition.
+Verify: python scripts/artifact-check.py --fixtures fixtures/ && python scripts/find-skill.py --fixtures fixtures/skills/ && python scripts/artifact-check.py specs/ && python scripts/build-dist.py
 
 ## Gate Exemptions
 <!-- a non-applicable gate must be declared here with a reason + scope, never skipped silently; artifact-check enforces the pairing -->
@@ -16,9 +20,13 @@ Verify: python scripts/artifact-check.py --fixtures fixtures/ && python scripts/
 
 ## Deferred
 <!-- remaining risks as open checkboxes: unchecked = not done -->
-- (none -- the consciously-open items from the scan are already recorded in their own chains: dist-packaging D1, dod-closure R2)
+<!-- first pass carried no Deferred (its consciously-open items live in their own chains: dist-packaging D1 -- discharged v2.3.2, dod-closure R2) -->
+- [ ] D1: release.yml pins actions by floating major tag (`@v4`/`@v5`/`@v2`, `python-version: "3.x"`) instead of commit SHA -- a supply-chain hardening item, consciously left open: the correct SHAs cannot be verified offline and a wrong SHA silently breaks tag-push releases; suggested follow-up: pin each action to its commit SHA (verified against the upstream repo) the next time a release is cut, and consider a fixed minor Python version
 
 ## Review
 <!-- where review conclusions land (§5.2); an open blocker/major makes closing illegal -->
 - R1 [resolved]: (minor) the malformed-line guard could false-positive on sub-task numbering like `- [x] T2.1: ...` -- accepted deliberately: that shape is not in any template, and the guard's strictness is the point (A1 scope)
 - R2 [resolved]: (minor) T1's evidence in the malformed-task fixture cites the fixture run that reports the fixture itself as FAIL -- that is the design (expectation-matched failure, run exits 0); wording reviewed for clarity
+- R3 [resolved]: (minor) comment-stripping on AC extraction also stops commented ACs from being referenceable targets -- a task citing a commented AC now errors "references unknown AC-<n>"; accepted deliberately (same strictness shape as the v2.3.1 malformed-line guard, pinned in comment-ac R1)
+- R4 [resolved]: (minor) the scan-fixes intent's first-pass Deferred placeholder ("none") needed replacing rather than appending when D1 arrived -- placeholder semantics kept simple: an explicit "(none)" line is replaced, real entries are never silently dropped
+- R5 [open|minor]: README fixture-count prose now says 9 artifact cases while fixture dirs total 10 (9 artifact + 1 probe dir skipped) -- wording already disambiguates ("另有 1 个非产物探针目录跳过"), recorded only
