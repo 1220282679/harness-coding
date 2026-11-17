@@ -19,20 +19,26 @@ CHANGELOG, design docs, fixtures/, specs/, .claude/, opencode.json,
 repo. build-dist.py excludes itself -- the packager is not runtime
 surface.
 
-Cross-platform reproducibility: zip entry metadata is pinned --
-create_system = 3 and external_attr = 0o644 -- because ZipInfo's
-create_system defaults to the RUNNING PLATFORM (0 on Windows, 3 on
-Unix), which made a Windows working-tree build differ by sha256 from
-the CI-built zip of the SAME content (found comparing the v2.3.4
-release: CI 2e8286a0... vs Windows 76ad4352...). Copied text files are
-additionally normalized CRLF -> LF, defensively: .gitattributes
-(eol=lf) only governs fresh checkouts, so a stale working tree could
-in principle drift (byte-level audit 2026-11-17: every current tree,
-blob and zip is already LF-only; the normalization is a no-op today).
-All allowlisted files are text (md/py/LICENSE); no binary enters the
-bundle. Residual variance: zlib's deflate output across platforms --
-same-content cross-machine identity is expected but only provable by
-comparing against the next tag-push build.
+Cross-platform reproducibility -- guaranteed by construction, not by
+expectation: zip entries are STORED (no compression) with pinned
+metadata (create_system = 3, external_attr = 0o644, fixed timestamps,
+forward-slash names). DEFLATED was dropped on empirical grounds: the
+v2.3.7 comparison this build had been waiting for since v2.3.6 came
+back negative -- the CI (ubuntu) build and a same-content Windows build
+had the SAME compressed size (45.4 KB) but different sha256
+(bfa9986c... vs e6f1a290...). zlib's deflate output varies across
+platforms/zlib builds at any compression level, so no deflate setting
+can pin the bytes. A stored entry is a raw copy plus CRC32 -- both
+deterministic -- so identical content MUST yield an identical zip on
+any machine or Python build. Cost: the zip grows to the uncompressed
+bundle size (~100 KB), trivial for an installable skill.
+
+Copied text files are additionally normalized CRLF -> LF, defensively:
+.gitattributes (eol=lf) only governs fresh checkouts, so a stale
+working tree could in principle drift (byte-level audit 2026-11-17:
+every current tree, blob and zip is already LF-only; the normalization
+is a no-op today). All allowlisted files are text (md/py/LICENSE); no
+binary enters the bundle.
 
 Safety: only <out>/harness-coding/ is ever cleaned, and --out must
 resolve inside the repo (and not be the repo root), so a misdirected
@@ -174,9 +180,13 @@ def write_zip(out_dir, bundle, zip_stem):
                 continue
             arc = p.relative_to(bundle.parent).as_posix()
             info = zipfile.ZipInfo(arc, date_time=ZIP_EPOCH)
-            info.create_system = 3           # pin Unix: platform default (0 on Windows) breaks cross-machine reproducibility
+            info.create_system = 3           # pin Unix (metadata identity)
             info.external_attr = 0o644 << 16
-            info.compress_type = zipfile.ZIP_DEFLATED
+            # STORED, not DEFLATED: zlib deflate output varies across
+            # platforms/zlib builds (empirical: v2.3.7 CI bfa9986c... vs
+            # Windows e6f1a290..., same size, different bytes). A stored
+            # entry is a raw copy + CRC32 -- deterministic by construction.
+            info.compress_type = zipfile.ZIP_STORED
             zf.writestr(info, p.read_bytes())
     return zip_path
 

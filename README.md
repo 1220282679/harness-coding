@@ -82,7 +82,7 @@ python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-codin
 
 不想本地构建也可以直接从 GitHub Releases 下载 zip，两条车道门禁完全相同（`.github/workflows/release.yml`）：**正式版**——推送 `v*` tag，CI 构建不可变的版本 Release（对应 CHANGELOG）；**滚动版**——每次 main push 自动更新 `latest` prerelease，zip 按提交命名（`harness-coding-main-<sha>.zip`），无需版本号，随时可取最新构建。滚动构建仅用于安装，不是版本，不计入 CHANGELOG。
 
-把 `dist/harness-coding/` 整体复制（或软链）到下表任一技能目录即可。打包为 **allowlist 白名单制**：只含运行面（SKILL.md / references/ / 三个运行脚本 / LICENSE），dev 文件（README / CHANGELOG / fixtures / specs / 设计文档）不会混入；构建自带自校验（含零 CRLF 断言），zip 条目元数据平台无关（`create_system` 固定）——同内容的跨机器构建可复现（首次跨机器实证：对比下一次 tag-push 的 CI 产物与本地构建的 sha256）。
+把 `dist/harness-coding/` 整体复制（或软链）到下表任一技能目录即可。打包为 **allowlist 白名单制**：只含运行面（SKILL.md / references/ / 三个运行脚本 / LICENSE），dev 文件（README / CHANGELOG / fixtures / specs / 设计文档）不会混入；构建自带自校验（含零 CRLF 断言）。zip 条目为 **STORED（不压缩）+ 固定元数据**——条目字节由内容唯一决定，跨机器可复现是**构造性保证**（v2.3.7 实证：zlib deflate 跨平台输出不一致，同尺寸不同哈希，DEFLATED 无法钉住字节，见 v2.3.8）。
 
 | Harness | 路径 |
 |---------|------|

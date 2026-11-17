@@ -5,6 +5,19 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.8 — 2026-11-17
+
+The cross-machine comparison pending since v2.3.6 came back — negative. The v2.3.7 release page showed CI sha256 `bfa9986c…` against the local same-content baseline `e6f1a290…`: identical compressed size (45.4 KB), different bytes. Verdict: zlib's deflate output varies across platforms/zlib builds at any compression level (local: Python 3.13 / zlib 1.3.1; CI: Python 3.12 / its own zlib) — no DEFLATED configuration can pin the bytes.
+
+### Fixed
+
+- **Zip entries switched to STORED (no compression)** in `build-dist.py`: a stored entry is a raw copy plus CRC32 — both deterministic — so identical content now yields a byte-identical zip on any machine by construction, not by expectation. `create_system` pin and CRLF normalization are retained. Cost: the zip grows from ~45 KB to ~103 KB (uncompressed bundle size), trivial for an installable skill. Evidence: double build → identical sha256 `e2b3171a…`, all 19 entries `compress_type=0`, `testzip` clean (dist-packaging AC-10/T9; R7 records the falsification honestly)
+
+### Changed
+
+- dist-packaging chain continued per §12: AC-10 + T9 landed, R7 records the empirical falsification (the deciding evidence was the user's release-page screenshot closing the loop three local builds could not)
+- README reproducibility wording updated (guarantee by construction); SKILL.md `version: 2.3.8`. The v2.3.8 tag push provides the final CI-vs-Windows confirmation — compare the release's sha256 against `e2b3171a…`
+
 ## v2.3.7 — 2026-11-17
 
 Decouples "publish" from "version": releases previously required a version bump every time, which was the right discipline for milestones but too heavy for "I just want the latest installable zip". Two release lanes now share the identical gates — the version discipline applies only where it belongs.
