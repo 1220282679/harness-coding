@@ -31,14 +31,14 @@ description: The filled-in adapter layer for the Claude Code harness (v2). Maps 
 
 ## 2. Quality-Gate Commands (project-defined)
 
-> Four gates in a fixed order: lint → format → type → test. Commands are defined by the **project**; the Python stack below is the example toolchain — replace per project.
+> Four gates in a fixed order: lint → format → type → test. Commands are **project-defined** — replace all four rows per project; the Notes column lists cross-stack examples, never a harness mandate.
 
 | Gate | Command | Notes |
 |------|---------|-------|
-| lint | `ruff check .` | e.g. eslint / gofmt -l |
-| format | `ruff format --check .` | e.g. prettier --check |
-| type | `mypy --strict .` | e.g. tsc --noEmit |
-| test | `pytest --cov=<module>` | coverage sub-gate enforced only when the project declares a threshold (e.g. `[tool.coverage.report] fail_under`); none declared → plain pass/fail, never invent a number |
+| lint | `<project-defined>` | Python e.g. `ruff check .`; JS: eslint; Go: gofmt -l |
+| format | `<project-defined>` | Python e.g. `ruff format --check .`; JS: prettier --check |
+| type | `<project-defined>` | Python e.g. `mypy --strict .`; JS: tsc --noEmit |
+| test | `<project-defined>` | Python e.g. `pytest --cov=<module>` (coverage sub-gate enforced only when the project declares a threshold, e.g. `[tool.coverage.report] fail_under`; none declared → plain pass/fail, never invent a number) |
 
 - Per-task (🟡/🔴): lint / format / type in full + **affected test subset** (e.g. `pytest tests/<module>/`); full test suite is mandatory at close-out re-verification
 - Gate N/A: declare in spec/intent `## Gate Exemptions` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently

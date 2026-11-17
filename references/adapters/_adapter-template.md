@@ -39,14 +39,14 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 
 ## 2. Quality-Gate Commands (defined by the project)
 
-> Four gates in a fixed order: lint → format → type → test. The commands are defined by the **project**, independent of this harness.
+> Four gates in a fixed order: lint → format → type → test. Commands are **project-defined** — replace all four rows per project; the Notes column lists cross-stack examples, never a harness mandate.
 
 | Gate | Command | Notes |
 |------|---------|-------|
-| lint | fill-in | e.g. ruff check . / eslint / gofmt -l |
-| format | fill-in | e.g. ruff format --check . / prettier --check |
-| type | fill-in | e.g. mypy --strict . / tsc --noEmit |
-| test | fill-in | e.g. pytest --cov=... (the coverage threshold belongs to this gate) |
+| lint | fill-in | Python e.g. `ruff check .`; JS: eslint; Go: gofmt -l |
+| format | fill-in | Python e.g. `ruff format --check .`; JS: prettier --check |
+| type | fill-in | Python e.g. `mypy --strict .`; JS: tsc --noEmit |
+| test | fill-in | Python e.g. `pytest --cov=<module>` (coverage sub-gate enforced only when the project declares a threshold, e.g. `[tool.coverage.report] fail_under`; none declared → plain pass/fail, never invent a number) |
 
 > Full re-run before closing (🟡/🔴 close-out re-verification) is mandatory.
 
