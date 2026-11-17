@@ -5,6 +5,24 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.4 — 2026-11-17
+
+Discharges scan-fixes Deferred D1 on the occasion it prescribed: the first tag-push release. The release workflow gets supply-chain hardening, then v2.3.4 becomes the first real tag cut — the CI run validates the workflow and the hardening in one go.
+
+### Changed
+
+- **Actions pinned to commit SHAs** (release.yml): `actions/checkout@11d5960a…` (v4.4.0), `actions/setup-python@a26af69…` (v5.6.0), `softprops/action-gh-release@3bb12739…` (v2.6.2). SHAs verified via `git ls-remote` against each action's official repository (TLS) — not search results; all three tags are lightweight, so the listed SHA is the commit. The verification method + date live as a comment in release.yml so the next upgrade repeats it
+- **Runner Python pinned to 3.12** (was floating `"3.x"` — D1's suggested follow-up); stdlib-only scripts, no compatibility risk
+
+### Closed
+
+- scan-fixes Deferred D1 checked off with a completion annotation; the discharge is recorded as a third Intent Addition on the same 🟡 chain (§12), including the "which chain owns this" decision (R6: where recorded, not where the file lives)
+- scan-fixes Gate Exemptions test-slot prose synced (8 → 9 artifact cases, missed in v2.3.3)
+
+### Changed
+
+- SKILL.md `version: 2.3.4`
+
 ## v2.3.3 — 2026-11-17
 
 Second scan-fixes round (same 🟡 chain, §12 append): the five actionable findings from the 2026-11-17 external scan. The scan's sixth finding (CI action SHA pinning) is consciously left open — see Deferred D1.
