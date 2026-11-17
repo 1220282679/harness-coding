@@ -5,6 +5,21 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.5 — 2026-11-17
+
+Closes the design-intent gap the probe already covered: `find-skill.py` scans `~/.workbuddy/skills` (DEFAULT_ROOTS since v2.2.x), but `references/adapters/` shipped no workbuddy.md — the skill was designed for WorkBuddy yet not onboarded onto it.
+
+### Added
+
+- **`references/adapters/workbuddy.md`**: the fourth filled-in adapter, per `_adapter-template.md`, structured like the claude-code/opencode siblings. Maps the 7 required capabilities (Read / Write / Edit / Glob / Grep / Bash+PowerShell / AskUserQuestion — **batch native**, up to 4 questions per call) and the 4 mapped optional ones (Agent → Explore/general-purpose sub-agents / git-branch / command probe / WebSearch+WebFetch). Tool names verified against the **live WorkBuddy session authoring the adapter (2026-11-17)** — the strongest verification an adapter can carry
+- WorkBuddy-specific deviations recorded (§7): directory reads → Glob; harness task tools may mirror but never replace artifact state; find_skill resolution order Skill/ToolSearch → probe → static table; sandbox escalation is an `ask_user` decision, never a silent way past a failed gate
+- dogfood chain `specs/workbuddy-adapter/` (🟡) — the fifth chain under continuous artifact-check validation (specs/ now validates 5 chains: 3 🔴 + 2 🟡)
+
+### Changed
+
+- README directory-tree adapters comment (claude-code / codex / opencode / workbuddy / _template)
+- SKILL.md `version: 2.3.5`. The bundle allowlist copies `references/**` wholesale, so the new adapter ships with no build-script change (verified in the build listing)
+
 ## v2.3.4 — 2026-11-17
 
 Discharges scan-fixes Deferred D1 on the occasion it prescribed: the first tag-push release. The release workflow gets supply-chain hardening, then v2.3.4 becomes the first real tag cut — the CI run validates the workflow and the hardening in one go.

@@ -61,7 +61,7 @@ harness-coding/
 │   └── workflows/release.yml       # tag 发布 CI（门禁 + 可复现构建 + zip 附到 Release）
 ├── references/
 │   ├── capability-contract.md      # 能力契约（7 必需 + 5 可选）
-│   ├── adapters/                   # 适配器层（claude-code / codex / opencode / _template）
+│   ├── adapters/                   # 适配器层（claude-code / codex / opencode / workbuddy / _template）
 │   └── templates/                  # spec / plan / tasks / intent 产物模板 + 3 份派发模板 + 收尾契约
 ├── scripts/
 │   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫 / Gate N/A 配对）
