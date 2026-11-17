@@ -5,6 +5,8 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+> **发布策略**（2026-11-17 起采用批量发布制）：版本 = 发布动作，不是变更动作（1 version = N chains）。日常变更只 commit + 全量门禁，latest 滚动 Release 由 CI 自动覆盖；CHANGELOG 在发布时一次性汇总，每条变更一行，根因长叙述见 `specs/` 各链的 tasks 证据与 Review 区。
+
 ## v2.3.8 — 2026-11-17
 
 The cross-machine comparison pending since v2.3.6 came back — negative. The v2.3.7 release page showed CI sha256 `bfa9986c…` against the local same-content baseline `e6f1a290…`: identical compressed size (45.4 KB), different bytes. Verdict: zlib's deflate output varies across platforms/zlib builds at any compression level (local: Python 3.13 / zlib 1.3.1; CI: Python 3.12 / its own zlib) — no DEFLATED configuration can pin the bytes.

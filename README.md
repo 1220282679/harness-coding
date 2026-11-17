@@ -115,3 +115,12 @@ python scripts/derive-report.py specs/<slug>            # 生成追溯视图（s
 3. 不跳门禁、不藏失败；open 的 blocker/major 拒绝收尾
 4. 编排器绝不亲自写大型实现或测试（implementer 职责）
 5. 网搜结论必须附来源与时间；AC 必须保持本地可执行
+
+## 版本与发布约定（本仓库自身）
+
+采用**批量发布制**：版本是发布动作，不是变更动作（1 version = N chains）。
+
+- **变更期**（日常）：commit + 全量门禁 → 推 main。不动 SKILL.md 版本号、不写 CHANGELOG——`latest` 滚动 Release 已由 CI 自动更新，随时可安装
+- **发布期**（攒批）：行为变化攒够一批后，一次性 bump SKILL.md version + CHANGELOG 汇总 + 推 `v*` tag（不可变版本 Release）
+- **CHANGELOG 条目格式**：每条变更一行——变更内容 + 一句话根因 + 所属链（如 `dist-packaging T9`）；根因长叙述不重复写，它们活在 `specs/` 各链的 tasks 证据与 Review 区
+- **不变底线**：产物链纪律（🟢🟡🔴、AC↔T 闭合、证据粘贴）、全量门禁、open blocker/major 拒绝收尾——对宿主项目示范的纪律不因自我减负而打折
