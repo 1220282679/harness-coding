@@ -1,9 +1,22 @@
 name: release
 
-# dist-packaging D1 (AC-7): tag push builds the release zip and attaches it
-# to the tag's GitHub Release. Runs the same locally-verifiable commands as
-# the repo's own gates: the fixture suites + specs validation, then the
-# self-verifying reproducible build (build-dist.py).
+# Two release lanes (dist-packaging AC-9), same gates, no skips:
+#
+#   v* tag push  -> immutable versioned GitHub Release with the default
+#                   reproducible zip (harness-coding-v<version>.zip, the
+#                   version read from SKILL.md). This lane is the CHANGELOG-
+#                   anchored milestone path; a version bump is its entry fee.
+#
+#   push to main -> rolling prerelease tagged `latest`: the zip is named
+#                   after the commit (--zip-stem harness-coding-main-<sha>)
+#                   so no version bump is needed. The previous rolling asset
+#                   is deleted and replaced; the release body records the
+#                   commit and the zip's sha256. Nothing here is recorded in
+#                   CHANGELOG.md -- rolling builds are installs, not versions.
+#
+# Both lanes run the identical locally-verifiable commands: the fixture
+# suites + specs validation, then the self-verifying reproducible build
+# (build-dist.py). A rolling build is never referenced as a version.
 
 # Actions are pinned to commit SHAs (scan-fixes Deferred D1, discharged v2.3.4).
 # SHAs verified 2026-11-17 via `git ls-remote` against each action's official
@@ -14,6 +27,8 @@ name: release
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*"
 
@@ -30,16 +45,50 @@ jobs:
         with:
           python-version: "3.12"  # fixed minor (D1 follow-up): reproducible runner env
 
-      - name: Release gates (fixture suites + specs validation)
+      - name: Gates (fixture suites + specs validation) -- both lanes
         run: |
           python scripts/artifact-check.py --fixtures fixtures/
           python scripts/find-skill.py --fixtures fixtures/skills/
           python scripts/artifact-check.py specs/
 
-      - name: Build bundle (self-verifying, reproducible zip)
-        run: python scripts/build-dist.py
+      - name: Build bundle (self-verifying, reproducible zip) -- both lanes
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            python scripts/build-dist.py
+          else
+            python scripts/build-dist.py --zip-stem "harness-coding-main-${GITHUB_SHA::7}"
+          fi
 
-      - name: Attach zip to the tag's GitHub Release
+      - name: Attach zip to the tag's immutable GitHub Release (v* lane)
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           files: dist/harness-coding-v*.zip
+
+      - name: Replace the rolling 'latest' prerelease (main lane)
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short="${GITHUB_SHA::7}"
+          zip="dist/harness-coding-main-${short}.zip"
+          sha=$(sha256sum "$zip" | cut -d' ' -f1)
+          gh release view latest >/dev/null 2>&1 || \
+            gh release create latest --prerelease \
+              --title "Rolling build (latest)" --notes "placeholder"
+          # rolling: only the newest build is kept (the commit is the trace)
+          while read -r asset; do
+            [ -n "$asset" ] && gh release delete-asset latest "$asset" -y
+          done < <(gh release view latest --json assets -q '.assets[].name' | grep '^harness-coding-main-' || true)
+          gh release upload latest "$zip" --clobber
+          gh release edit latest --notes "$(cat <<EOF
+          Rolling build -- auto-replaced on every push to main.
+
+          - commit: ${GITHUB_SHA}
+          - zip: harness-coding-main-${short}.zip
+          - zip sha256: ${sha}
+
+          Versioned releases (v* tags) are separate, immutable, and
+          CHANGELOG-anchored. Rolling builds are installs, not versions.
+          EOF
+          )"

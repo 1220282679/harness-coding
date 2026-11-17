@@ -2,18 +2,22 @@
 """build-dist.py -- release packaging: build the slim, installable skill bundle.
 
 Usage:
-    python scripts/build-dist.py [--out dist] [--no-zip]
+    python scripts/build-dist.py [--out dist] [--no-zip] [--zip-stem NAME]
 
 Builds the runtime surface a harness loads into <out>/harness-coding/:
 
     SKILL.md + references/** + the runtime scripts + LICENSE
 
 and (by default) a release zip <out>/harness-coding-v<version>.zip, the
-version read from SKILL.md frontmatter. The bundle is defined by an
-ALLOWLIST, not a blocklist: dev-only files (README, CHANGELOG, design
-docs, fixtures/, specs/, .claude/, opencode.json, .git*) can never leak
-into a bundle even when new ones appear in the repo. build-dist.py
-excludes itself -- the packager is not runtime surface.
+version read from SKILL.md frontmatter. --zip-stem overrides the zip's
+file name (stem + ".zip") without touching SKILL.md -- used by the
+rolling release lane (CI main-push builds name the zip after the
+commit SHA; versioned tag pushes keep the default). The bundle is
+defined by an ALLOWLIST, not a blocklist: dev-only files (README,
+CHANGELOG, design docs, fixtures/, specs/, .claude/, opencode.json,
+.git*) can never leak into a bundle even when new ones appear in the
+repo. build-dist.py excludes itself -- the packager is not runtime
+surface.
 
 Cross-platform reproducibility: zip entry metadata is pinned --
 create_system = 3 and external_attr = 0o644 -- because ZipInfo's
@@ -162,8 +166,8 @@ def verify_bundle(bundle, sources):
     return errs
 
 
-def write_zip(out_dir, bundle, version):
-    zip_path = out_dir / f"{BUNDLE_NAME}-v{version}.zip"
+def write_zip(out_dir, bundle, zip_stem):
+    zip_path = out_dir / f"{zip_stem}.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         for p in sorted(bundle.rglob("*")):
             if not p.is_file():
@@ -184,11 +188,15 @@ def main(argv=None):
                     help="output directory inside the repo (default: dist)")
     ap.add_argument("--no-zip", action="store_true",
                     help="skip the release zip")
+    ap.add_argument("--zip-stem", default=None,
+                    help="override the zip file name (stem, '.zip' appended); "
+                         "default: harness-coding-v<version> from SKILL.md")
     args = ap.parse_args(argv)
 
     version = read_version()
     if version is None:
         return 1
+    zip_stem = args.zip_stem or f"{BUNDLE_NAME}-v{version}"
     sources = collect_sources()
     if sources is None:
         return 1
@@ -210,7 +218,7 @@ def main(argv=None):
         print(f"  {rel.as_posix()}  ({src.stat().st_size} B)")
 
     if not args.no_zip:
-        zip_path = write_zip(out_dir, bundle, version)
+        zip_path = write_zip(out_dir, bundle, zip_stem)
         print(f"OK release zip: {zip_path.name}")
 
     print("\ninstall: copy or link the bundle dir into a skills directory --")

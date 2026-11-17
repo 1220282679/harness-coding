@@ -58,7 +58,7 @@ harness-coding/
 ├── SKILL.md                        # 方法论主体（v2）
 ├── SDD-REFACTOR-DESIGN.md          # v2 重构设计文档（已冻结）
 ├── .github/
-│   └── workflows/release.yml       # tag 发布 CI（门禁 + 可复现构建 + zip 附到 Release）
+│   └── workflows/release.yml       # 双车道发布 CI（main→latest 滚动 prerelease；v*→不可变版本 Release；门禁相同）
 ├── references/
 │   ├── capability-contract.md      # 能力契约（7 必需 + 5 可选）
 │   ├── adapters/                   # 适配器层（claude-code / codex / opencode / workbuddy / _template）
@@ -67,7 +67,7 @@ harness-coding/
 │   ├── artifact-check.py           # 产物校验器（schema / AC↔T 闭合 / 评审收尾守卫 / Gate N/A 配对）
 │   ├── derive-report.py            # 按需追溯视图（merge-base 基线，stdout，永不落盘）
 │   ├── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警 + junction 同源去重）
-│   └── build-dist.py               # 发布打包（allowlist 精简副本 + 字节级自校验 + 可复现 zip → dist/）
+│   └── build-dist.py               # 发布打包（allowlist 精简副本 + 字节级自校验 + 可复现 zip → dist/；--zip-stem 支持滚动车道按提交命名）
 ├── specs/                          # dogfood 产物链（dod-closure / review-hardening / dist-packaging / scan-fixes🟡）——artifact-check.py specs/ 持续校验的真实样本
 └── fixtures/                       # 产物校验用例 9 个（含故意损坏的 broken / broken-intent-na / malformed-task、合法豁免的 gate-na / intent-gate-na、注释 AC 的 comment-ac；.expect 支持逐错误类断言）+ 探针自检用例 4 个（short-query 回归 2 字符词过滤修复）
 ```
@@ -80,7 +80,7 @@ harness-coding/
 python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-coding-v<version>.zip
 ```
 
-不想本地构建也可以直接从 GitHub Releases 下载 zip：推送 `v*` tag 时 CI 自动跑同样的门禁并构建发布（`.github/workflows/release.yml`）。
+不想本地构建也可以直接从 GitHub Releases 下载 zip，两条车道门禁完全相同（`.github/workflows/release.yml`）：**正式版**——推送 `v*` tag，CI 构建不可变的版本 Release（对应 CHANGELOG）；**滚动版**——每次 main push 自动更新 `latest` prerelease，zip 按提交命名（`harness-coding-main-<sha>.zip`），无需版本号，随时可取最新构建。滚动构建仅用于安装，不是版本，不计入 CHANGELOG。
 
 把 `dist/harness-coding/` 整体复制（或软链）到下表任一技能目录即可。打包为 **allowlist 白名单制**：只含运行面（SKILL.md / references/ / 三个运行脚本 / LICENSE），dev 文件（README / CHANGELOG / fixtures / specs / 设计文档）不会混入；构建自带自校验（含零 CRLF 断言），zip 条目元数据平台无关（`create_system` 固定）——同内容的跨机器构建可复现（首次跨机器实证：对比下一次 tag-push 的 CI 产物与本地构建的 sha256）。
 

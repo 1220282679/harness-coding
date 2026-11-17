@@ -5,6 +5,20 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.7 — 2026-11-17
+
+Decouples "publish" from "version": releases previously required a version bump every time, which was the right discipline for milestones but too heavy for "I just want the latest installable zip". Two release lanes now share the identical gates — the version discipline applies only where it belongs.
+
+### Added
+
+- **Two release lanes in `release.yml`** (dist-packaging AC-9/T8): a push to `main` publishes a rolling prerelease tagged `latest` — same fixture/specs gates, zip named after the commit (`harness-coding-main-<short-sha>.zip` via the new `--zip-stem`), previous rolling asset deleted on replace, release body records the commit + zip sha256. The v* tag lane is unchanged: immutable, versioned, CHANGELOG-anchored. Rolling builds are installs, not versions — they never get a CHANGELOG entry (the explicit boundary, not an omission)
+- `build-dist.py --zip-stem NAME`: zip filename override without touching SKILL.md; default behavior (version-based name) verified unchanged
+
+### Changed
+
+- dist-packaging chain continued per §12: AC-9 + T8 landed; the main-push close-out of this version is the rolling lane's first live run, and the v2.3.7 tag doubles as the cross-platform sha256 comparison material pending since v2.3.6
+- README install section documents both lanes; SKILL.md `version: 2.3.7`
+
 ## v2.3.6 — 2026-11-17
 
 Found by comparing the live v2.3.4 release against a local build of the same tag: the two zips differed by sha256 despite identical content. Byte-level root cause: `ZipInfo.create_system` defaults to the running platform (0 on Windows, 3 on Unix), so CI-built and Windows-built zips could never match. Diagnosis honesty note: a grep-based line-ending survey first pointed the wrong way; the byte-level Python audit (worktree / blob / zip entry all CRLF=0) disproved it before anything shipped (dist-packaging R5).
