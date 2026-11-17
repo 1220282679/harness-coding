@@ -6,12 +6,13 @@ Background: .gitignore has reserved dist/ since v2.2.9 ("slim install copy: SKIL
 
 Acceptance criteria:
 - AC-1: `python scripts/build-dist.py --no-zip` exits 0 and creates dist/harness-coding/ containing exactly the allowlisted runtime surface (SKILL.md, LICENSE, references/**, the three runtime scripts) with a printed manifest
-- AC-2: the build self-verifies — every bundle file byte-identical to its source, no missing/extra files; verification output pasted in T2
-- AC-3: the default run also produces dist/harness-coding-v<version>.zip with the version read from SKILL.md frontmatter; `--no-zip` skips it; zip entries use forward slashes and fixed timestamps (reproducible — two builds of the same tree produce the same sha256)
+- AC-2: the build self-verifies — every bundle file byte-identical to its source, no missing/extra files; verification output pasted in T2 <!-- superseded 2026-11-17 (v2.3.6): verification compares against the line-ending-normalized source (CRLF→LF, defensive) plus a no-CRLF assertion; re-pointed by AC-8 -->
+- AC-3: the default run also produces dist/harness-coding-v<version>.zip with the version read from SKILL.md frontmatter; `--no-zip` skips it; zip entries use forward slashes and fixed timestamps (reproducible — two builds of the same tree produce the same sha256) <!-- superseded 2026-11-17 (v2.3.6): reproducibility scope widened from same-tree to cross-platform metadata (create_system pinned); re-pointed by AC-8 -->
 - AC-4: dev-only files (README.md, CHANGELOG.md, SDD-REFACTOR-DESIGN.md, fixtures/, specs/, .claude/, opencode.json, build-dist.py itself) are all absent from the bundle
 - AC-5: `python scripts/artifact-check.py --fixtures fixtures` PASS (7 artifact cases) and `python scripts/artifact-check.py specs/` PASS (now 3 chains) at close-out
 - AC-6: SKILL.md `version: 2.3.0` + CHANGELOG entry; README documents the build command in the install section and the new script in the tree
 - AC-7: `.github/workflows/release.yml` triggers on `v*` tag push and runs the same locally-verifiable commands — fixture gates + specs validation, `python scripts/build-dist.py`, then the zip is attached to the tag's GitHub Release; locally executable check: those gate + build commands pass on this tree (the live tag-push run verifies the wiring)
+- AC-8: zip entry metadata is platform-independent — every entry in `dist/harness-coding-v<version>.zip` has `create_system == 3` (pinned; ZipInfo defaults to the running platform: 0 on Windows, 3 on Unix — this is the byte-level root cause of the v2.3.4 CI-vs-Windows sha256 mismatch, CI 2e8286a0… vs Windows 76ad4352…) — and no bundle file contains CRLF (defensive normalization, byte-level audit 2026-11-17: all current trees/blobs/zips are already LF-only). Locally executable check: a python one-liner over the built zip's infolist + bundle bytes
 
 Assumptions:
 - A1: the bundle copies scripts/*.py wholesale minus build-dist.py itself — new runtime scripts are picked up automatically; the packager is not runtime surface

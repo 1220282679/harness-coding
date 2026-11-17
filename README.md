@@ -82,7 +82,7 @@ python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-codin
 
 不想本地构建也可以直接从 GitHub Releases 下载 zip：推送 `v*` tag 时 CI 自动跑同样的门禁并构建发布（`.github/workflows/release.yml`）。
 
-把 `dist/harness-coding/` 整体复制（或软链）到下表任一技能目录即可。打包为 **allowlist 白名单制**：只含运行面（SKILL.md / references/ / 三个运行脚本 / LICENSE），dev 文件（README / CHANGELOG / fixtures / specs / 设计文档）不会混入；构建自带字节级自校验，zip 可复现。
+把 `dist/harness-coding/` 整体复制（或软链）到下表任一技能目录即可。打包为 **allowlist 白名单制**：只含运行面（SKILL.md / references/ / 三个运行脚本 / LICENSE），dev 文件（README / CHANGELOG / fixtures / specs / 设计文档）不会混入；构建自带自校验（含零 CRLF 断言），zip 条目元数据平台无关（`create_system` 固定）——同内容的跨机器构建可复现（首次跨机器实证：对比下一次 tag-push 的 CI 产物与本地构建的 sha256）。
 
 | Harness | 路径 |
 |---------|------|

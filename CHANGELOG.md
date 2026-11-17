@@ -5,6 +5,20 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 # Changelog
 
+## v2.3.6 — 2026-11-17
+
+Found by comparing the live v2.3.4 release against a local build of the same tag: the two zips differed by sha256 despite identical content. Byte-level root cause: `ZipInfo.create_system` defaults to the running platform (0 on Windows, 3 on Unix), so CI-built and Windows-built zips could never match. Diagnosis honesty note: a grep-based line-ending survey first pointed the wrong way; the byte-level Python audit (worktree / blob / zip entry all CRLF=0) disproved it before anything shipped (dist-packaging R5).
+
+### Fixed
+
+- **`create_system` pinned to 3 in `write_zip`** (build-dist.py): zip entry metadata no longer depends on the building platform; combined with the existing fixed timestamps / external_attr / forward-slash entries, same-content zips are expected to be byte-identical across machines. Locally executable check ships as AC-8 (infolist assertion); the final cross-machine proof lands by comparing the next tag-push build against a Windows build (residual variance: zlib's deflate output — hook recorded in the docstring)
+- **Defensive CRLF→LF normalization in `build_bundle`/`verify_bundle`**: the bundle becomes independent of the working tree's line-ending state (byte-level audit 2026-11-17: every current tree, blob and zip is already LF-only, so this is a no-op today — recorded as such, not as the fix); the self-verification now compares against normalized source and asserts zero CRLF survived
+
+### Changed
+
+- dist-packaging chain continued per §12: AC-2/AC-3 carry supersede annotations re-pointing to AC-8; T7 landed; two new resolved review entries (R5 diagnosis honesty, R6 a briefly mis-edited historical T6 record caught and reverted within the round)
+- SKILL.md `version: 2.3.6`
+
 ## v2.3.5 — 2026-11-17
 
 Closes the design-intent gap the probe already covered: `find-skill.py` scans `~/.workbuddy/skills` (DEFAULT_ROOTS since v2.2.x), but `references/adapters/` shipped no workbuddy.md — the skill was designed for WorkBuddy yet not onboarded onto it.

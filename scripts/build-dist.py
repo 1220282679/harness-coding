@@ -15,13 +15,28 @@ docs, fixtures/, specs/, .claude/, opencode.json, .git*) can never leak
 into a bundle even when new ones appear in the repo. build-dist.py
 excludes itself -- the packager is not runtime surface.
 
+Cross-platform reproducibility: zip entry metadata is pinned --
+create_system = 3 and external_attr = 0o644 -- because ZipInfo's
+create_system defaults to the RUNNING PLATFORM (0 on Windows, 3 on
+Unix), which made a Windows working-tree build differ by sha256 from
+the CI-built zip of the SAME content (found comparing the v2.3.4
+release: CI 2e8286a0... vs Windows 76ad4352...). Copied text files are
+additionally normalized CRLF -> LF, defensively: .gitattributes
+(eol=lf) only governs fresh checkouts, so a stale working tree could
+in principle drift (byte-level audit 2026-11-17: every current tree,
+blob and zip is already LF-only; the normalization is a no-op today).
+All allowlisted files are text (md/py/LICENSE); no binary enters the
+bundle. Residual variance: zlib's deflate output across platforms --
+same-content cross-machine identity is expected but only provable by
+comparing against the next tag-push build.
+
 Safety: only <out>/harness-coding/ is ever cleaned, and --out must
 resolve inside the repo (and not be the repo root), so a misdirected
 --out cannot destroy source. The build verifies itself: every copied
-file is compared byte-identical against its source and the bundle tree
-is checked for missing/extra files before the zip is written. Zip
-entries use forward slashes and a fixed timestamp -- builds are
-reproducible byte-for-byte.
+file is compared against its normalized source and the bundle tree is
+checked for missing/extra files (and for any CRLF that survived) before
+the zip is written. Zip entries use forward slashes and a fixed
+timestamp -- builds of the same content are reproducible byte-for-byte.
 
 Pure standard library; zero third-party dependencies.
 Exit codes: 0 = built and verified, 1 = any failure.
@@ -106,8 +121,16 @@ def resolve_out_dir(out_arg):
     return out_dir
 
 
+def normalize_bytes(data):
+    """CRLF -> LF: make the bundle independent of the working tree's
+    line-ending state (see the docstring; found via the v2.3.4 release
+    comparison). All allowlisted files are text, so this is safe."""
+    return data.replace(b"\r\n", b"\n")
+
+
 def build_bundle(out_dir, sources):
-    """Copy the allowlist into <out>/harness-coding/ (only this subdir is cleaned)."""
+    """Copy the allowlist into <out>/harness-coding/ (only this subdir is
+    cleaned), normalizing line endings on the way in."""
     bundle = out_dir / BUNDLE_NAME
     if bundle.exists():
         shutil.rmtree(bundle)  # blast radius: the bundle dir only
@@ -115,7 +138,7 @@ def build_bundle(out_dir, sources):
     for rel, src in sources:
         dst = bundle / rel
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dst)
+        dst.write_bytes(normalize_bytes(src.read_bytes()))
     return bundle
 
 
@@ -128,8 +151,14 @@ def verify_bundle(bundle, sources):
     for rel in sorted(actual - expected):
         errs.append(f"unexpected extra in bundle: {rel}")
     for rel, src in sources:
-        if (bundle / rel).is_file() and (bundle / rel).read_bytes() != src.read_bytes():
-            errs.append(f"not byte-identical to source: {rel}")
+        f = bundle / rel
+        if f.is_file():
+            want = normalize_bytes(src.read_bytes())
+            got = f.read_bytes()
+            if got != want:
+                errs.append(f"not identical to normalized source: {rel}")
+            if b"\r\n" in got:
+                errs.append(f"CRLF survived normalization: {rel}")
     return errs
 
 
@@ -141,6 +170,7 @@ def write_zip(out_dir, bundle, version):
                 continue
             arc = p.relative_to(bundle.parent).as_posix()
             info = zipfile.ZipInfo(arc, date_time=ZIP_EPOCH)
+            info.create_system = 3           # pin Unix: platform default (0 on Windows) breaks cross-machine reproducibility
             info.external_attr = 0o644 << 16
             info.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(info, p.read_bytes())
