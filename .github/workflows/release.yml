@@ -48,7 +48,7 @@ jobs:
 
       - name: Static checks on scripts/ (lint + type) -- both lanes
         run: |
-          pip install --quiet ruff==0.17.5 mypy==2.4.1
+          pip install --quiet -r requirements-dev.txt
           ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length 120
           mypy --strict scripts/
 

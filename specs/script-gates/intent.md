@@ -11,6 +11,11 @@ Verify: ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length
 Intent: De-digitize the two hardcoded fixture counts in README ("产物校验用例 9 个 ... 探针自检用例 4 个" in the tree comment, "9 个产物用例全部符合预期" in the verification block) -- the only finding in the 2026-11-18 review backed by an observed failure class rather than speculation: dod-closure's AC-8 (fixture-count comment matching the runner output) was superseded twice as the count drifted 5 -> 6 -> 7 -> 8 across v2.2.5/v2.2.7. Wording now states the category list and defers the count to the runner's actual output. CHANGELOG entries are immutable release history and keep their counts.
 Verify: python scripts/artifact-check.py --fixtures fixtures/ && python scripts/find-skill.py --fixtures fixtures/skills/ && python scripts/artifact-check.py specs/ && python scripts/build-dist.py && (grep -nE "用例 [0-9]+ 个|[0-9]+ 个产物用例" README.md || echo "no hardcoded counts remain")
 
+### 2026-11-18 D1 discharge (requirements-dev.txt)
+
+Intent: Discharge this chain's Deferred D1 -- add `requirements-dev.txt` as the single source of truth for the static-check tool pins (ruff==0.17.5 / mypy==2.4.1, unchanged from what CI already pinned inline); release.yml's Static checks step now installs via `pip install -r requirements-dev.txt` instead of repeating the versions inline, closing the local-vs-CI version-skew window by construction. README's verification section points at the file instead of hardcoding versions. The file is dev-only tooling: dist packaging's allowlist can never include it, and the runtime scripts stay pure stdlib.
+Verify: ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length 120 && mypy --strict scripts/ && python scripts/artifact-check.py --fixtures fixtures/ && python scripts/find-skill.py --fixtures fixtures/skills/ && python scripts/artifact-check.py specs/ && python scripts/build-dist.py && pip install --quiet -r requirements-dev.txt && echo "requirements-dev.txt resolves"
+
 ## Gate Exemptions
 <!-- a non-applicable gate must be declared here with a reason + scope, never skipped silently; artifact-check enforces the pairing -->
 - GATE-NA(format): no formatter configured in this repo (ruff --fix not adopted; formatting stays hand-consistent and the checker is line-length neutral) -- scope: chain-wide
@@ -18,7 +23,7 @@ Verify: python scripts/artifact-check.py --fixtures fixtures/ && python scripts/
 
 ## Deferred
 <!-- remaining risks as open checkboxes: unchecked = not done -->
-- [ ] D1: local static-check runs use whatever ruff/mypy is installed in the session env, while CI pins exact versions (ruff==0.17.5 / mypy==2.4.1) -- a version-skew window between a local green and a CI red exists by construction; suggested follow-up: add a requirements-dev.txt (or equivalent) pinning both tools, referenced by README's verification section
+- [x] D1: local static-check runs use whatever ruff/mypy is installed in the session env, while CI pins exact versions (ruff==0.17.5 / mypy==2.4.1) -- a version-skew window between a local green and a CI red exists by construction; suggested follow-up: add a requirements-dev.txt (or equivalent) pinning both tools, referenced by README's verification section <!-- discharged 2026-11-18: requirements-dev.txt added as the single pin source; CI installs from it; see the "D1 discharge" Intent Addition -->
 
 ## Review
 <!-- where review conclusions land (§5.2); an open blocker/major makes closing illegal -->

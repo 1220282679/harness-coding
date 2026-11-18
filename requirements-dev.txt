@@ -1,0 +1,6 @@
+# Dev-only tooling pins (script-gates chain D1): single source of truth for
+# the static-check versions. CI (release.yml) installs from this file; local
+# runs should match. Runtime scripts are pure stdlib -- these are never
+# needed to USE the skill, only to run its static checks.
+ruff==0.17.5
+mypy==2.4.1
