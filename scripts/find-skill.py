@@ -32,11 +32,11 @@ import sys
 from pathlib import Path
 
 DEFAULT_ROOTS = [
-    "~/.agents/skills",           # cross-runtime Agent Skills Standard
-    "~/.claude/skills",           # Claude Code
-    "~/.codex/skills",            # OpenAI Codex
+    "~/.agents/skills",  # cross-runtime Agent Skills Standard
+    "~/.claude/skills",  # Claude Code
+    "~/.codex/skills",  # OpenAI Codex
     "~/.config/opencode/skills",  # opencode
-    "~/.workbuddy/skills",        # WorkBuddy
+    "~/.workbuddy/skills",  # WorkBuddy
 ]
 PROJECT_ROOTS = [
     ".agents/skills",
@@ -47,7 +47,7 @@ PROJECT_ROOTS = [
 
 FIXTURE_QUERY = "validation demo"  # fixed query for --fixtures self-test
 
-Entry = dict[str, str]           # parsed SKILL.md frontmatter: {name, version, description, ...}
+Entry = dict[str, str]  # parsed SKILL.md frontmatter: {name, version, description, ...}
 Library = dict[str, list[Entry]]  # skill name -> copies across locations
 
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---", re.S)
@@ -160,9 +160,12 @@ def run(query: str, roots: list[str]) -> int:
             # Roots exist but hold no parseable SKILL.md -- distinct from
             # "no library at all" so the operator knows where to look
             # (exit code stays 2: no usable library either way).
-            print(f"{locations_seen} skill-library root(s) present but no "
-                  "parseable SKILL.md in any of them -- check dir layout "
-                  "(<skill>/SKILL.md) and frontmatter", file=sys.stderr)
+            print(
+                f"{locations_seen} skill-library root(s) present but no "
+                "parseable SKILL.md in any of them -- check dir layout "
+                "(<skill>/SKILL.md) and frontmatter",
+                file=sys.stderr,
+            )
         else:
             print("no skill library found in any standard location", file=sys.stderr)
         return 2
@@ -202,18 +205,18 @@ def run_fixtures(fixtures_dir: Path) -> int:
         got_drift = "warn" if warns else "none"
         passed = code == want_exit and got_drift == want_drift
         ok = ok and passed
-        print(f"{'PASS' if passed else 'FAIL'}: {case.name} "
-              f"(exit={code} want {want_exit}; drift={got_drift} want {want_drift})")
+        print(
+            f"{'PASS' if passed else 'FAIL'}: {case.name} "
+            f"(exit={code} want {want_exit}; drift={got_drift} want {want_drift})"
+        )
     return 0 if ok else 3
 
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="Skill-library probe (find_skill fallback)")
     ap.add_argument("query", nargs="?", help="search terms, e.g. 'clarification questions'")
-    ap.add_argument("--root", action="append", default=[],
-                    help="probe these library roots instead of the defaults")
-    ap.add_argument("--fixtures", type=Path, metavar="DIR",
-                    help="self-test mode: run fixture cases under DIR and exit")
+    ap.add_argument("--root", action="append", default=[], help="probe these library roots instead of the defaults")
+    ap.add_argument("--fixtures", type=Path, metavar="DIR", help="self-test mode: run fixture cases under DIR and exit")
     args = ap.parse_args()
     if args.fixtures:
         sys.exit(run_fixtures(args.fixtures))

@@ -8,6 +8,7 @@ Generates the traceable view from task artifacts + a merge-base diff and
 prints it to stdout. Read-only: this script never writes anything.
 Exit codes: 0 = view generated, 1 = task directory not found.
 """
+
 import argparse
 import re
 import subprocess
@@ -37,7 +38,7 @@ def section(text: str, name: str) -> str:
     m = re.search(rf"^## {re.escape(name)}\s*$", text, re.M)
     if not m:
         return ""
-    rest = text[m.end():]
+    rest = text[m.end() :]
     nxt = re.search(r"^## ", rest, re.M)
     return rest[: nxt.start()].strip() if nxt else rest.strip()
 

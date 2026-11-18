@@ -14,6 +14,7 @@ Usage:
 Pure standard library; zero third-party dependencies.
 Exit codes: 0 = all pass, 1 = any failure.
 """
+
 import re
 import sys
 from pathlib import Path
@@ -33,7 +34,7 @@ def section(text: str, name: str) -> str:
     m = re.search(rf"^## {re.escape(name)}\s*$", text, re.M)
     if not m:
         return ""
-    rest = text[m.end():]
+    rest = text[m.end() :]
     nxt = re.search(r"^## ", rest, re.M)
     return rest[: nxt.start()] if nxt else rest
 
@@ -199,7 +200,7 @@ def run_fixtures(fixdir: str) -> int:
             continue
         lines = [line.strip() for line in expect_file.read_text(encoding="utf-8").splitlines() if line.strip()]
         expect = lines[0] if lines else ""
-        want_errs = [e[len("err="):] for e in lines[1:] if e.startswith("err=")]
+        want_errs = [e[len("err=") :] for e in lines[1:] if e.startswith("err=")]
         specs = case / "specs"
         errs = []
         if specs.is_dir():
@@ -221,8 +222,10 @@ def run_fixtures(fixdir: str) -> int:
     if failures:
         print(f"FAIL fixtures: mismatched cases: {', '.join(failures)}")
         return 1
-    print(f"PASS fixtures: {matched} artifact cases matched expectations "
-          f"({skipped} non-artifact dir{'s' if skipped != 1 else ''} skipped)")
+    print(
+        f"PASS fixtures: {matched} artifact cases matched expectations "
+        f"({skipped} non-artifact dir{'s' if skipped != 1 else ''} skipped)"
+    )
     return 0
 
 

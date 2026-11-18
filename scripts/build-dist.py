@@ -64,7 +64,7 @@ VERSION_RE = re.compile(r"^version:\s*(\S+)", re.M)
 TOP_FILES = ("SKILL.md", "LICENSE")
 COPY_DIRS = ("references", "scripts")
 RUNTIME_SCRIPTS = ("artifact-check.py", "derive-report.py", "find-skill.py")
-SELF = "build-dist.py"             # the packager does not ship in the bundle
+SELF = "build-dist.py"  # the packager does not ship in the bundle
 BUNDLE_NAME = "harness-coding"
 ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)  # fixed timestamp -> reproducible zips
 
@@ -180,7 +180,7 @@ def write_zip(out_dir: Path, bundle: Path, zip_stem: str) -> Path:
                 continue
             arc = p.relative_to(bundle.parent).as_posix()
             info = zipfile.ZipInfo(arc, date_time=ZIP_EPOCH)
-            info.create_system = 3           # pin Unix (metadata identity)
+            info.create_system = 3  # pin Unix (metadata identity)
             info.external_attr = 0o644 << 16
             # STORED, not DEFLATED: zlib deflate output varies across
             # platforms/zlib builds (empirical: v2.3.7 CI bfa9986c... vs
@@ -192,15 +192,14 @@ def write_zip(out_dir: Path, bundle: Path, zip_stem: str) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(
-        description="build the slim, installable skill bundle under dist/")
-    ap.add_argument("--out", default="dist",
-                    help="output directory inside the repo (default: dist)")
-    ap.add_argument("--no-zip", action="store_true",
-                    help="skip the release zip")
-    ap.add_argument("--zip-stem", default=None,
-                    help="override the zip file name (stem, '.zip' appended); "
-                         "default: harness-coding-v<version> from SKILL.md")
+    ap = argparse.ArgumentParser(description="build the slim, installable skill bundle under dist/")
+    ap.add_argument("--out", default="dist", help="output directory inside the repo (default: dist)")
+    ap.add_argument("--no-zip", action="store_true", help="skip the release zip")
+    ap.add_argument(
+        "--zip-stem",
+        default=None,
+        help="override the zip file name (stem, '.zip' appended); default: harness-coding-v<version> from SKILL.md",
+    )
     args = ap.parse_args(argv)
 
     version = read_version()
@@ -234,9 +233,11 @@ def main(argv: list[str] | None = None) -> int:
     print("\ninstall: copy or link the bundle dir into a skills directory --")
     for harness, path in INSTALL_HINTS:
         print(f"  {harness}: {path}")
-    print("host project: allow 'python scripts/artifact-check.py*', "
-          "'python scripts/derive-report.py*' and 'python scripts/find-skill.py*' "
-          "(see README)")
+    print(
+        "host project: allow 'python scripts/artifact-check.py*', "
+        "'python scripts/derive-report.py*' and 'python scripts/find-skill.py*' "
+        "(see README)"
+    )
     return 0
 
 
