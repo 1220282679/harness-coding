@@ -69,7 +69,7 @@ harness-coding/
 │   ├── find-skill.py               # 技能库探针（find_skill 降级路径：标准位置扫描 + 同名多版本漂移告警 + junction 同源去重）
 │   └── build-dist.py               # 发布打包（allowlist 精简副本 + 字节级自校验 + 可复现 zip → dist/；--zip-stem 支持滚动车道按提交命名）
 ├── specs/                          # dogfood 产物链（dod-closure / review-hardening / dist-packaging / scan-fixes🟡 / script-gates🟡）——artifact-check.py specs/ 持续校验的真实样本
-└── fixtures/                       # 产物校验用例 9 个（含故意损坏的 broken / broken-intent-na / malformed-task、合法豁免的 gate-na / intent-gate-na、注释 AC 的 comment-ac；.expect 支持逐错误类断言）+ 探针自检用例 4 个（short-query 回归 2 字符词过滤修复）
+└── fixtures/                       # 产物校验用例（含故意损坏的 broken / broken-intent-na / malformed-task、合法豁免的 gate-na / intent-gate-na、注释 AC 的 comment-ac；.expect 支持逐错误类断言）+ 探针自检用例（drift / no-drift / empty / short-query 回归 2 字符词过滤修复）——计数随版本增长，以 runner 实际输出为准
 ```
 
 ## 安装
@@ -97,7 +97,7 @@ python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-codin
 ```bash
 ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length 120  # 脚本 lint（CI 同款命令，版本钉死 ruff==0.17.5）
 mypy --strict scripts/                                                        # 脚本类型检查（CI 同款命令，版本钉死 mypy==2.4.1）
-python scripts/artifact-check.py --fixtures fixtures/   # 9 个产物用例全部符合预期（broken / broken-intent-na / malformed-task 预期报错；另有 1 个非产物探针目录跳过）
+python scripts/artifact-check.py --fixtures fixtures/   # 全部产物用例符合预期（broken / broken-intent-na / malformed-task 预期报错；探针目录自动跳过）
 python scripts/find-skill.py --fixtures fixtures/skills # 探针自测（drift / no-drift / empty / short-query；.expect 支持 query= 覆盖）
 python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
 python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）
