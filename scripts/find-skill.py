@@ -47,11 +47,14 @@ PROJECT_ROOTS = [
 
 FIXTURE_QUERY = "validation demo"  # fixed query for --fixtures self-test
 
+Entry = dict[str, str]           # parsed SKILL.md frontmatter: {name, version, description, ...}
+Library = dict[str, list[Entry]]  # skill name -> copies across locations
+
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---", re.S)
 FIELD_RES = {k: re.compile(rf"^{k}:\s*(.+)$", re.M) for k in ("name", "version", "description")}
 
 
-def parse_skill(skill_md):
+def parse_skill(skill_md: Path) -> Entry | None:
     """Parse SKILL.md frontmatter -> {name, version, description} or None."""
     try:
         text = skill_md.read_text(encoding="utf-8", errors="replace")
@@ -73,16 +76,17 @@ def parse_skill(skill_md):
     return fields
 
 
-def scan_roots(roots):
+def scan_roots(roots: list[str]) -> tuple[Library, int]:
     """Scan roots -> (library: {name: [entry]}, locations_seen: int).
 
     entry = {name, version, description, root, path}.
     Copies resolving to the same real path (junction/symlink aliases of one
     physical library) are counted once -- the first root in order wins.
     """
-    library, locations_seen, seen_real = {}, 0, set()
-    for root in roots:
-        root = Path(root).expanduser()
+    library: Library = {}
+    locations_seen, seen_real = 0, set()
+    for root_dir in roots:
+        root = Path(root_dir).expanduser()
         if not root.is_dir():
             continue
         locations_seen += 1
@@ -99,7 +103,7 @@ def scan_roots(roots):
     return library, locations_seen
 
 
-def match(library, query):
+def match(library: Library, query: str) -> list[tuple[int, Entry]]:
     """Score entries against query terms; return [(score, entry)] desc.
 
     Terms of length >= 2 are kept (2-char terms like "go"/"py" are real
@@ -126,7 +130,7 @@ def match(library, query):
     return scored
 
 
-def drift_warnings(library):
+def drift_warnings(library: Library) -> list[str]:
     """Same skill name in multiple locations with differing versions."""
     warns = []
     for name, entries in sorted(library.items()):
@@ -139,7 +143,7 @@ def drift_warnings(library):
     return warns
 
 
-def print_hits(scored):
+def print_hits(scored: list[tuple[int, Entry]]) -> None:
     for score, e in scored:
         print(f"{e['name']}  v{e['version']}  [score {score}]  {e['path']}")
         if e["description"]:
@@ -147,7 +151,7 @@ def print_hits(scored):
             print(f"    {desc}")
 
 
-def run(query, roots):
+def run(query: str, roots: list[str]) -> int:
     library, locations_seen = scan_roots(roots)
     for w in drift_warnings(library):
         print(w, file=sys.stderr)
@@ -170,7 +174,7 @@ def run(query, roots):
     return 0
 
 
-def run_fixtures(fixtures_dir):
+def run_fixtures(fixtures_dir: Path) -> int:
     """Self-test: each case dir holds synthetic library roots + .expect
     (lines: exit=<0|1|2>, optional drift=warn|none, optional query=<terms>
     overriding the default FIXTURE_QUERY)."""
@@ -203,7 +207,7 @@ def run_fixtures(fixtures_dir):
     return 0 if ok else 3
 
 
-def main():
+def main() -> None:
     ap = argparse.ArgumentParser(description="Skill-library probe (find_skill fallback)")
     ap.add_argument("query", nargs="?", help="search terms, e.g. 'clarification questions'")
     ap.add_argument("--root", action="append", default=[],

@@ -75,11 +75,11 @@ INSTALL_HINTS = (
 )
 
 
-def fail(msg):
+def fail(msg: str) -> None:
     print(f"error: {msg}", file=sys.stderr)
 
 
-def read_version():
+def read_version() -> str | None:
     text = (REPO / "SKILL.md").read_text(encoding="utf-8")
     m = VERSION_RE.search(text)
     if not m:
@@ -88,7 +88,7 @@ def read_version():
     return m.group(1)
 
 
-def collect_sources():
+def collect_sources() -> list[tuple[Path, Path]] | None:
     """Allowlisted (relpath, src) pairs; None + message on a broken surface."""
     files = []
     for name in TOP_FILES:
@@ -119,7 +119,7 @@ def collect_sources():
     return sorted(files)
 
 
-def resolve_out_dir(out_arg):
+def resolve_out_dir(out_arg: str) -> Path | None:
     """Anchor --out inside the repo; refuse the repo root itself."""
     out_dir = Path(out_arg)
     if not out_dir.is_absolute():
@@ -131,14 +131,14 @@ def resolve_out_dir(out_arg):
     return out_dir
 
 
-def normalize_bytes(data):
+def normalize_bytes(data: bytes) -> bytes:
     """CRLF -> LF: make the bundle independent of the working tree's
     line-ending state (see the docstring; found via the v2.3.4 release
     comparison). All allowlisted files are text, so this is safe."""
     return data.replace(b"\r\n", b"\n")
 
 
-def build_bundle(out_dir, sources):
+def build_bundle(out_dir: Path, sources: list[tuple[Path, Path]]) -> Path:
     """Copy the allowlist into <out>/harness-coding/ (only this subdir is
     cleaned), normalizing line endings on the way in."""
     bundle = out_dir / BUNDLE_NAME
@@ -152,7 +152,7 @@ def build_bundle(out_dir, sources):
     return bundle
 
 
-def verify_bundle(bundle, sources):
+def verify_bundle(bundle: Path, sources: list[tuple[Path, Path]]) -> list[str]:
     errs = []
     expected = {rel for rel, _ in sources}
     actual = {p.relative_to(bundle) for p in bundle.rglob("*") if p.is_file()}
@@ -172,7 +172,7 @@ def verify_bundle(bundle, sources):
     return errs
 
 
-def write_zip(out_dir, bundle, zip_stem):
+def write_zip(out_dir: Path, bundle: Path, zip_stem: str) -> Path:
     zip_path = out_dir / f"{zip_stem}.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         for p in sorted(bundle.rglob("*")):
@@ -191,7 +191,7 @@ def write_zip(out_dir, bundle, zip_stem):
     return zip_path
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description="build the slim, installable skill bundle under dist/")
     ap.add_argument("--out", default="dist",

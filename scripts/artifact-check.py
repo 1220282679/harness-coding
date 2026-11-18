@@ -28,7 +28,7 @@ GATES = {"lint", "format", "type", "test"}
 LEVELS = {"blocker", "major", "minor"}
 
 
-def section(text, name):
+def section(text: str, name: str) -> str:
     """Return the body of a '## <name>' section ('' when absent)."""
     m = re.search(rf"^## {re.escape(name)}\s*$", text, re.M)
     if not m:
@@ -38,7 +38,7 @@ def section(text, name):
     return rest[: nxt.start()] if nxt else rest
 
 
-def without_sections(text, names):
+def without_sections(text: str, names: set[str]) -> str:
     out = []
     skip = None
     for line in text.splitlines():
@@ -51,13 +51,13 @@ def without_sections(text, names):
     return "\n".join(out)
 
 
-def without_comments(text):
+def without_comments(text: str) -> str:
     """HTML comments never count (v2.2.8): a commented-out exemption
     declaration or usage is not an active one."""
     return re.sub(r"<!--.*?-->", "", text, flags=re.S)
 
 
-def check_review(text, errs, where):
+def check_review(text: str, errs: list[str], where: str) -> None:
     body = section(text, "Review")
     for line in body.splitlines():
         m = REVIEW_RE.match(line)
@@ -80,7 +80,7 @@ def check_review(text, errs, where):
             )
 
 
-def check_gate_exemptions(task_text, decl_text, errs, where):
+def check_gate_exemptions(task_text: str, decl_text: str, errs: list[str], where: str) -> None:
     """Gate N/A protocol: every GATE-NA(<gate>) used anywhere in the task
     artifacts must have a matching declaration in the spec/intent Gate
     exemptions section. Full-text scan (not just T-lines) so the 🟡 intent
@@ -104,7 +104,7 @@ def check_gate_exemptions(task_text, decl_text, errs, where):
                 )
 
 
-def check_task_file(text, spec_acs, errs, where):
+def check_task_file(text: str, spec_acs: set[str], errs: list[str], where: str) -> bool:
     body = without_sections(text, {"Deferred", "Review", "Intent Additions"})
     seen_tasks = False
     covered = set()
@@ -139,7 +139,7 @@ def check_task_file(text, spec_acs, errs, where):
     return seen_tasks
 
 
-def validate_task_dir(d):
+def validate_task_dir(d: Path) -> list[str]:
     errs = []
     w = d.as_posix()  # normalize separators (Windows backslashes mixed with '/' otherwise)
     if not SLUG_RE.match(d.name):
@@ -182,7 +182,7 @@ def validate_task_dir(d):
     return errs
 
 
-def run_fixtures(fixdir):
+def run_fixtures(fixdir: str) -> int:
     failures = []
     cases = sorted(p for p in Path(fixdir).iterdir() if p.is_dir())
     if not cases:
@@ -197,9 +197,9 @@ def run_fixtures(fixdir):
             print(f"[SKIP] {case.name}: no .expect (not an artifact fixture)")
             skipped += 1
             continue
-        lines = [l.strip() for l in expect_file.read_text(encoding="utf-8").splitlines() if l.strip()]
+        lines = [line.strip() for line in expect_file.read_text(encoding="utf-8").splitlines() if line.strip()]
         expect = lines[0] if lines else ""
-        want_errs = [l[len("err="):] for l in lines[1:] if l.startswith("err=")]
+        want_errs = [e[len("err="):] for e in lines[1:] if e.startswith("err=")]
         specs = case / "specs"
         errs = []
         if specs.is_dir():
@@ -226,7 +226,7 @@ def run_fixtures(fixdir):
     return 0
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     if "--fixtures" in argv:
         i = argv.index("--fixtures")
         if i + 1 >= len(argv):
