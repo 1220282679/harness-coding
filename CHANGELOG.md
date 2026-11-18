@@ -7,6 +7,25 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 > **发布策略**（2026-11-17 起采用批量发布制）：版本 = 发布动作，不是变更动作（1 version = N chains）。日常变更只 commit + 全量门禁，latest 滚动 Release 由 CI 自动覆盖；CHANGELOG 在发布时一次性汇总，每条变更一行，根因长叙述见 `specs/` 各链的 tasks 证据与 Review 区。
 
+## v2.4.0 — 2026-11-18
+
+First batch release under the new policy (1 version = N chains): eight commits accumulated on main since v2.3.8, one line each, root causes live in the spec chains.
+
+### Added
+
+- **Script static-check gates** (script-gates chain): ruff lint + `mypy --strict` join the CI Static checks step, both lanes, pinned via `requirements-dev.txt` (ruff==0.17.5 / mypy==2.4.1) — the single pin source, also closing the local-vs-CI version-skew window (script-gates D1 discharge). All four scripts fully annotated under `--strict`; E741 ambiguous names renamed. With the format gate below, the repo's own four-gate set (lint/format/type/test) is complete — only test stays exempt (fulfilled by fixture suites, no pytest)
+- **Format gate**: `ruff format --check scripts/` joins Static checks; landed in two steps — isolated mechanical reformat first (74 lines, full gates re-run green as behavior-unchanged evidence), gate second, no logic mixed in; script-gates chain's format exemption withdrawn (historical chains' exemptions untouched — true at declaration time)
+
+### Changed
+
+- **Adapter gate examples neutralized** (0565680): Command column is `<project-defined>`/fill-in across all 5 adapters; Python/JS/Go examples demoted to Notes with a "never a harness mandate" declaration — non-Python projects no longer risk reading the Python stack as a hard constraint
+- **README fixture counts de-digitized** (a008222): count-free wording defers to the runner's actual output — the only 2026-11-18 review finding backed by an observed failure class (dod-closure AC-8 superseded twice as the count drifted 5→6→7→8)
+
+### Honesty notes
+
+- workbuddy adapter D1 closed by an end-to-end drill (54a6f2b): full chain run in a live host project, all gates green — but driven by the orchestrator following SKILL.md, not via native skill auto-trigger; the native-load path remains unexercised
+- The batch release policy itself (8778273) was adopted in this window: change-period = commit + gates only, no version ceremony per change
+
 ## v2.3.8 — 2026-11-17
 
 The cross-machine comparison pending since v2.3.6 came back — negative. The v2.3.7 release page showed CI sha256 `bfa9986c…` against the local same-content baseline `e6f1a290…`: identical compressed size (45.4 KB), different bytes. Verdict: zlib's deflate output varies across platforms/zlib builds at any compression level (local: Python 3.13 / zlib 1.3.1; CI: Python 3.12 / its own zlib) — no DEFLATED configuration can pin the bytes.
