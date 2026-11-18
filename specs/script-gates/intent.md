@@ -16,9 +16,13 @@ Verify: python scripts/artifact-check.py --fixtures fixtures/ && python scripts/
 Intent: Discharge this chain's Deferred D1 -- add `requirements-dev.txt` as the single source of truth for the static-check tool pins (ruff==0.17.5 / mypy==2.4.1, unchanged from what CI already pinned inline); release.yml's Static checks step now installs via `pip install -r requirements-dev.txt` instead of repeating the versions inline, closing the local-vs-CI version-skew window by construction. README's verification section points at the file instead of hardcoding versions. The file is dev-only tooling: dist packaging's allowlist can never include it, and the runtime scripts stay pure stdlib.
 Verify: ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length 120 && mypy --strict scripts/ && python scripts/artifact-check.py --fixtures fixtures/ && python scripts/find-skill.py --fixtures fixtures/skills/ && python scripts/artifact-check.py specs/ && python scripts/build-dist.py && pip install --quiet -r requirements-dev.txt && echo "requirements-dev.txt resolves"
 
+### 2026-11-18 format gate adoption
+
+Intent: Close the last self-consistency gap from the 2026-11-18 review -- the repo preaches the four-gate discipline to host projects while exempting format itself. Two-step landing to keep diffs honest: (1) an isolated mechanical reformat commit (ruff format, line-length 120; 4 files, 74 lines, zero behavior change -- proven by re-running the full gates on the reformat alone); (2) this change adds `ruff format --check scripts/ --line-length 120` to release.yml's Static checks step (both lanes) and the README verification block, and withdraws this chain's format exemption -- the repo's own four-gate set is now lint/format/type/test with only test still fulfilled by the fixture suites. Empirical note: the first-pass report guessed the reformat at "~100+ lines"; the actual diff was 74 lines. Historical chains' format exemptions stay untouched (true at declaration time).
+Verify: ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length 120 && ruff format --check scripts/ --line-length 120 && mypy --strict scripts/ && python scripts/artifact-check.py --fixtures fixtures/ && python scripts/find-skill.py --fixtures fixtures/skills/ && python scripts/artifact-check.py specs/ && python scripts/build-dist.py
+
 ## Gate Exemptions
 <!-- a non-applicable gate must be declared here with a reason + scope, never skipped silently; artifact-check enforces the pairing -->
-- GATE-NA(format): no formatter configured in this repo (ruff --fix not adopted; formatting stays hand-consistent and the checker is line-length neutral) -- scope: chain-wide
 - GATE-NA(test): no pytest suite; the test slot is fulfilled by the fixture suites (9 artifact cases + 4 probe cases) plus specs validation plus the build's self-verification, run in full at close-out -- scope: chain-wide
 
 ## Deferred

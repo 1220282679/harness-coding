@@ -96,6 +96,7 @@ python scripts/build-dist.py     # → dist/harness-coding/ + dist/harness-codin
 
 ```bash
 ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length 120  # 脚本 lint（CI 同款命令；ruff/mypy 版本钉死在 requirements-dev.txt）
+ruff format --check scripts/ --line-length 120                                # 脚本 format 门禁（CI 同款命令）
 mypy --strict scripts/                                                        # 脚本类型检查（CI 同款命令）
 python scripts/artifact-check.py --fixtures fixtures/   # 全部产物用例符合预期（broken / broken-intent-na / malformed-task 预期报错；探针目录自动跳过）
 python scripts/find-skill.py --fixtures fixtures/skills # 探针自测（drift / no-drift / empty / short-query；.expect 支持 query= 覆盖）

@@ -46,10 +46,11 @@ jobs:
         with:
           python-version: "3.12"  # fixed minor (D1 follow-up): reproducible runner env
 
-      - name: Static checks on scripts/ (lint + type) -- both lanes
+      - name: Static checks on scripts/ (lint + format + type) -- both lanes
         run: |
           pip install --quiet -r requirements-dev.txt
           ruff check scripts/ --isolated --select E,F,W,UP,B,SIM,RUF --line-length 120
+          ruff format --check scripts/ --line-length 120
           mypy --strict scripts/
 
       - name: Gates (fixture suites + specs validation) -- both lanes
