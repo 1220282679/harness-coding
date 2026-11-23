@@ -56,6 +56,7 @@ jobs:
       - name: Gates (fixture suites + specs validation) -- both lanes
         run: |
           python scripts/artifact-check.py --fixtures fixtures/
+          python scripts/artifact-check.py --migrate-fixtures fixtures/migrate/
           python scripts/find-skill.py --fixtures fixtures/skills/
           python scripts/artifact-check.py specs/
 
