@@ -89,6 +89,9 @@ mypy --strict scripts/                                                        # 
 python scripts/artifact-check.py --fixtures fixtures/   # 产物校验自测（含故意损坏样本）
 python scripts/find-skill.py --fixtures fixtures/skills # 探针自测
 python scripts/artifact-check.py specs/                 # 校验宿主项目的任务产物
+python scripts/artifact-check.py --migrate specs/ --dry-run  # 预览遗留 GATE-NA 迁移（执法强化前合法关闭的链）
+python scripts/artifact-check.py --migrate specs/            # 执行迁移：内联用法归并进 ## Gate Exemptions 节（幂等）
+python scripts/artifact-check.py --migrate-fixtures fixtures/migrate/  # 迁移自测（门集合 + 迁移后 PASS + 幂等）
 python scripts/derive-report.py specs/<slug>            # 生成追溯视图（stdout）
 ```
 

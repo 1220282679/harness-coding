@@ -4,6 +4,17 @@
 Usage:
     python scripts/artifact-check.py <specs_dir> [<specs_dir> ...]
     python scripts/artifact-check.py --fixtures fixtures/
+    python scripts/artifact-check.py --migrate <specs_dir>... [--dry-run]
+    python scripts/artifact-check.py --migrate-fixtures fixtures/migrate/
+
+--migrate folds legacy inline GATE-NA usages into a proper `## Gate
+Exemptions` section. Enforcement of the pairing hardened over time (v2.0.2
+introduced the protocol, v2.2.7 scoped intent declarations to the section,
+v2.3.3 stripped comments); chains that legally closed under an older
+validator can fail retroactively. Migration is mechanical and honest: it
+declares gates exactly as used, never invents a rationale, and is
+idempotent (re-running changes nothing). Unknown gates are reported, never
+rewritten into a valid gate.
 
 .expect format (artifact fixtures, one file per case dir):
     line 1:  pass | fail -- the expected validation outcome
@@ -11,12 +22,21 @@ Usage:
              reported error lines (per-error-class assertions: a single
              silent check regression can no longer hide behind other errors)
 
+.expect format (migrate fixtures, run via --migrate-fixtures):
+    line 1:  migrate
+    line 2:  gates=<comma-separated gates the migration must declare>
+             (empty after '=' when the chain is already compliant)
+    line 3:  pass -- the chain must validate clean after migration; the
+             second migration pass must be a no-op (idempotency assertion)
+
 Pure standard library; zero third-party dependencies.
 Exit codes: 0 = all pass, 1 = any failure.
 """
 
 import re
+import shutil
 import sys
+import tempfile
 from pathlib import Path
 
 AC_RE = re.compile(r"^\s*-\s*(AC-\d+)\s*:", re.M)
@@ -183,6 +203,102 @@ def validate_task_dir(d: Path) -> list[str]:
     return errs
 
 
+MIGRATION_NOTE = (
+    "legacy inline usage migrated by artifact-check --migrate; original rationale "
+    "was not recorded at declaration time (chain closed before the pairing "
+    "hardening, v2.2.7) -- declared as used, scope: chain-wide"
+)
+
+
+def undeclared_gate_uses(task_text: str, decl_text: str) -> tuple[set[str], set[str]]:
+    """Gates used but undeclared, computed exactly as the pairing check does,
+    so migration and validation can never disagree. Returns (migratable,
+    unknown); unknown gates are never rewritten into a valid gate."""
+    declared = set(GATE_NA_RE.findall(without_comments(decl_text)))
+    body = without_sections(without_comments(task_text), {"Deferred", "Review"})
+    migratable: set[str] = set()
+    unknown: set[str] = set()
+    for gate in GATE_NA_RE.findall(body):
+        if gate not in GATES:
+            unknown.add(gate)
+        elif gate not in declared:
+            migratable.add(gate)
+    return migratable, unknown
+
+
+def _exemption_section(gates: set[str], eol: str) -> str:
+    lines = [
+        "## Gate Exemptions",
+        "<!-- a non-applicable gate must be declared here with a reason + scope, "
+        "never skipped silently; artifact-check enforces the pairing -->",
+    ]
+    for gate in sorted(gates):
+        lines.append(f"- GATE-NA({gate}): {MIGRATION_NOTE}")
+    return eol.join(lines) + eol
+
+
+def _add_declarations(text: str, gates: set[str]) -> str:
+    """Fold declarations into the file. A missing `## Gate Exemptions` section
+    is appended; an existing one receives the lines IN PLACE -- appending a
+    second section would be invisible to the validator, which reads the first
+    (real bug, caught by the partial-intent fixture on its first run)."""
+    eol = "\r\n" if "\r\n" in text else "\n"
+    m = re.search(r"^## Gate Exemptions\s*$", text, re.M)
+    if not m:
+        suffix = "" if text.endswith("\n") else eol
+        return text + suffix + eol + _exemption_section(gates, eol)
+    lines = [f"- GATE-NA({g}): {MIGRATION_NOTE}" for g in sorted(gates)]
+    rest_start = m.end()
+    nxt = re.search(r"^## ", text[rest_start:], re.M)
+    insert_at = rest_start + nxt.start() if nxt else len(text)
+    prefix, rest = text[:insert_at], text[insert_at:]
+    if not prefix.endswith("\n"):
+        prefix += eol
+    return prefix + eol.join(lines) + eol + rest
+
+
+def migrate_chain(d: Path, dry_run: bool = False) -> list[str]:
+    """Fold legacy inline GATE-NA usages into a `## Gate Exemptions` section.
+    Returns human-readable action lines (empty = nothing to do). Idempotent:
+    a second pass finds no undeclared usages and writes nothing."""
+    actions: list[str] = []
+    used: set[str] = set()
+    unknown: set[str] = set()
+    names = {p.name for p in d.iterdir() if p.is_file()}
+    if "intent.md" in names:
+        path = d / "intent.md"
+        text = path.read_text(encoding="utf-8")
+        used, unknown = undeclared_gate_uses(text, section(text, "Gate Exemptions"))
+        if used:
+            actions.append(f"{d.as_posix()}: intent declares {', '.join(f'GATE-NA({g})' for g in sorted(used))}")
+        for gate in sorted(unknown):
+            actions.append(
+                f"{d.as_posix()}: SKIPPED unknown gate GATE-NA({gate}) (cannot migrate; validator still errors)"
+            )
+        if used and not dry_run:
+            path.write_text(_add_declarations(text, used), encoding="utf-8")
+    elif "spec.md" in names:
+        spec_path = d / "spec.md"
+        spec = spec_path.read_text(encoding="utf-8")
+        if "tasks.md" in names:
+            tasks = (d / "tasks.md").read_text(encoding="utf-8")
+            # 🔴 declarations are full-spec scanned, so undeclared usages are
+            # those missing from the spec as a whole -- the section is still
+            # where they belong per the documented shape.
+            spec_used, spec_unknown = undeclared_gate_uses(tasks, spec)
+            used |= spec_used
+            unknown |= spec_unknown
+        if used:
+            actions.append(f"{d.as_posix()}: spec declares {', '.join(f'GATE-NA({g})' for g in sorted(used))}")
+        for gate in sorted(unknown):
+            actions.append(
+                f"{d.as_posix()}: SKIPPED unknown gate GATE-NA({gate}) (cannot migrate; validator still errors)"
+            )
+        if used and not dry_run:
+            spec_path.write_text(_add_declarations(spec, used), encoding="utf-8")
+    return actions
+
+
 def run_fixtures(fixdir: str) -> int:
     failures = []
     cases = sorted(p for p in Path(fixdir).iterdir() if p.is_dir())
@@ -200,6 +316,13 @@ def run_fixtures(fixdir: str) -> int:
             continue
         lines = [line.strip() for line in expect_file.read_text(encoding="utf-8").splitlines() if line.strip()]
         expect = lines[0] if lines else ""
+        if expect == "migrate":
+            # Migration fixture -- exercised by --migrate-fixtures, which owns
+            # the stronger assertions (gates declared + post-migration pass +
+            # idempotency). Skipped here so the artifact suite stays pure.
+            print(f"[SKIP] {case.name}: migrate fixture (run via --migrate-fixtures)")
+            skipped += 1
+            continue
         want_errs = [e[len("err=") :] for e in lines[1:] if e.startswith("err=")]
         specs = case / "specs"
         errs = []
@@ -229,6 +352,61 @@ def run_fixtures(fixdir: str) -> int:
     return 0
 
 
+def run_migrate_fixtures(fixdir: str) -> int:
+    """Migration self-test: each case runs migrate twice (idempotency),
+    validates clean, and must declare exactly the expected gate set.
+    Cases run on a temp copy -- migration writes files, and a self-test
+    must never mutate the repository it lives in."""
+    failures = []
+    cases = sorted(p for p in Path(fixdir).iterdir() if p.is_dir())
+    if not cases:
+        print(f"FAIL migrate-fixtures: no cases under {fixdir}")
+        return 1
+    matched = 0
+    for case in cases:
+        expect_file = case / ".expect"
+        if not expect_file.exists():
+            print(f"[SKIP] {case.name}: no .expect")
+            continue
+        lines = [line.strip() for line in expect_file.read_text(encoding="utf-8").splitlines() if line.strip()]
+        if not lines or lines[0] != "migrate":
+            print(f"[SKIP] {case.name}: not a migrate fixture")
+            continue
+        want_gates = set(
+            g for g in next((e[len("gates=") :] for e in lines if e.startswith("gates=")), "").split(",") if g
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            work = Path(tmp) / case.name
+            shutil.copytree(case, work)
+            specs = work / "specs"
+            chains = sorted(p for p in specs.iterdir() if p.is_dir()) if specs.is_dir() else []
+            actions = [a for td in chains for a in migrate_chain(td)]
+            got_gates = set(re.findall(r"GATE-NA\((\w+)\)", " ".join(actions)))
+            errs = [e for td in chains for e in validate_task_dir(td)]
+            rerun = [a for td in chains for a in migrate_chain(td)]
+        ok = got_gates == want_gates and not errs and not rerun
+        label = "PASS" if ok else "FAIL"
+        print(
+            f"[{label}] migrate fixture {case.name} "
+            f"(expect gates {sorted(want_gates) or '[]'}, got {sorted(got_gates) or '[]'})"
+        )
+        for a in actions:
+            print(f"       - {a}")
+        for e in errs:
+            print(f"       - validation error after migration: {e}")
+        if rerun:
+            print(f"       - NOT idempotent: second pass still changed {len(rerun)} thing(s)")
+        if ok:
+            matched += 1
+        else:
+            failures.append(case.name)
+    if failures:
+        print(f"FAIL migrate-fixtures: mismatched cases: {', '.join(failures)}")
+        return 1
+    print(f"PASS migrate-fixtures: {matched} cases matched (gates declared + post-migration pass + idempotent)")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if "--fixtures" in argv:
         i = argv.index("--fixtures")
@@ -236,8 +414,37 @@ def main(argv: list[str]) -> int:
             print("usage: artifact-check.py --fixtures <dir>")
             return 1
         return run_fixtures(argv[i + 1])
+    if "--migrate-fixtures" in argv:
+        i = argv.index("--migrate-fixtures")
+        if i + 1 >= len(argv):
+            print("usage: artifact-check.py --migrate-fixtures <dir>")
+            return 1
+        return run_migrate_fixtures(argv[i + 1])
+    if "--migrate" in argv:
+        dry_run = "--dry-run" in argv
+        dirs = [a for a in argv if a not in ("--migrate", "--dry-run")]
+        if not dirs:
+            print("usage: artifact-check.py --migrate <specs_dir>... [--dry-run]")
+            return 1
+        total: list[str] = []
+        for arg in dirs:
+            d = Path(arg)
+            if not d.is_dir():
+                print(f"  - {arg}: directory not found")
+                continue
+            for td in sorted(p for p in d.iterdir() if p.is_dir()):
+                total.extend(migrate_chain(td, dry_run=dry_run))
+        for a in total:
+            print(f"  - {a}")
+        if dry_run:
+            print(f"DRY RUN: {len(total)} action(s), no files written")
+        elif total:
+            print(f"{len(total)} action(s) applied -- re-run artifact-check to validate")
+        else:
+            print("nothing to migrate (all chains already declare their GATE-NA usages)")
+        return 0
     if not argv:
-        print("usage: artifact-check.py <specs_dir>... | --fixtures <dir>")
+        print("usage: artifact-check.py <specs_dir>... | --fixtures <dir> | --migrate <specs_dir>... [--dry-run]")
         return 1
     all_errs = []
     for arg in argv:

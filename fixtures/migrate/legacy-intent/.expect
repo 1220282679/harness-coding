@@ -1,0 +1,3 @@
+migrate
+gates=lint,format
+pass
