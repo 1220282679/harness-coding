@@ -7,6 +7,19 @@ description: Release history for the harness-coding skill. Covers the v2 artifac
 
 > **发布策略**（2026-11-17 起采用批量发布制）：版本 = 发布动作，不是变更动作（1 version = N chains）。日常变更只 commit + 全量门禁，latest 滚动 Release 由 CI 自动覆盖；CHANGELOG 在发布时一次性汇总，每条变更一行，根因长叙述见 `specs/` 各链的 tasks 证据与 Review 区。
 
+## v2.4.1 — 2026-11-23
+
+Three commits accumulated on main since v2.4.0, one line each, root causes live in the spec chains.
+
+### Added
+
+- **GATE-NA legacy migration** (bc4a619, script-gates chain §12): `artifact-check.py --migrate <specs_dir>... [--dry-run]` — undeclared gate usages computed by the exact pairing logic, folded into Gate Exemptions with an honest note (original rationale not recorded, never invented); unknown gates reported, never rewritten; per-file EOL preserved; idempotency asserted. Production evidence: 7 of 42 oapi-gateway-client chains legally closed 2026-11-11~13 failed retroactively under the v2.2.7 pairing hardening (2026-11-23 forensics over 235 real Codex sessions) — enforcement hardening had no migration path for existing host artifacts. Two real bugs caught by fixtures on first run: a second Gate Exemptions section is invisible to the validator (now merged in place); the migrate self-test mutated its own repo (now runs on temp copies). 4 migrate fixtures; all client chains now 42/42 PASS
+
+### Changed
+
+- **Migrate fixtures join the CI Gates step** (8f74a6b): `--migrate-fixtures` shipped with local runs only, so a migration regression would pass CI silently while README documents the command — the gates-identical promise is restored, both lanes
+- **README rewritten for concision** (a83a863): 130 → 116 lines, all substance kept (channel matrix, roles, gates, CI-same commands, contract, hard constraints); prose duplicating SKILL.md/references dropped
+
 ## v2.4.0 — 2026-11-18
 
 First batch release under the new policy (1 version = N chains): eight commits accumulated on main since v2.3.8, one line each, root causes live in the spec chains.
