@@ -1,82 +1,89 @@
 ---
 name: harness-coding-adapter-claude-code
-description: The filled-in adapter layer for the Claude Code harness (v2). Maps the capability contract (7 required + 4 mapped optional) to Claude Code's concrete tools (Read / Write / Edit / Glob / Grep / Bash / AskUserQuestion / Agent / EnterWorktree / WebSearch), and declares quality-gate commands and role mapping. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding under Claude Code (SKILL.md prerequisites).
+description: The filled-in adapter for the Claude Code harness. Maps the capability contract to Claude Code's live tool catalogue under a probe-first rule (probe order + fallback, never a promise that a tool exists), declares the single-entrypoint gate command and its pre-approval requirement via `.claude/settings.json`, and carries the degradation annotation for each capability inline. Read a section lazily — only when a capability mismatch or a gate is actually reached.
 ---
 
 # Adapter Layer: Claude Code
 
-> The filled-in adapter for the Claude Code execution harness. The methodology body (SKILL.md) and the capability contract stay unchanged; this file answers exactly one question: **what concrete Claude Code mechanism implements each capability in the contract**.
+> Answers exactly one question: **what concrete Claude Code mechanism implements each capability**. The live tool catalogue of the current session is authoritative; this file supplies only probe order and fallback.
 >
-> **Version note**: tool names verified against Claude Code as of **2026-11-16**. The authoritative set is the live tool catalogue of the current session — never assume a tool exists without confirming.
+> **Read tiers**: §0–§1 before the first command (they decide every command); §2 at the first gate; §3 at dispatch; §4–§5 as reference.
 
----
+## 0. Approval & Command Discipline (read before the first command)
 
-## 1. Capability Mapping Table
+Claude Code matches every `Bash` invocation against the allow patterns in `.claude/settings.json` (project) / `~/.claude/settings.json` (user). **Prefix patterns, not commands**: `Bash(python scripts/artifact-check.py*)` covers any suffix, but a command with a different head does not match and asks. The permission set is injected into the session, so an allow rule added mid-session changes that block — treat every approval as a prefix change, and the whole context behind it as cold on the next turn.
 
-> All capabilities except `find_skill` map to Claude Code primitives as follows (`find_skill` resolves context-first per SKILL.md §7 — no mapping needed). Anything that can't be mapped is marked "unsupported" honestly — never invented.
+1. **One entrypoint per project** — the exact gate string declared in §2, reused verbatim.
+2. **Pre-approve it** — add `Bash(<entrypoint>:*)` to `.claude/settings.json` **before** the session. Target: ≤3 approvals per session. Never rely on "yes, and don't ask again" mid-task: that rule lands halfway through the run.
+3. **No nested shells** — `bash -c "..."` / `sh -c "..."` do not match the entrypoint pattern, so each one prompts. Never wrap a command that way.
+4. **No repeated preamble** — no per-call `export`, `cd`, `set -e` or env prefix; bake it into the entrypoint script (§2).
+5. **One command, one job** — no `;` / `&&` piles. A retyped 900-character one-liner is a new prefix every time.
 
-| Capability | Implementation in Claude Code | Notes |
-|------------|-------------------------------|-------|
-| `read` | **Read** tool | Reads a single file. **Deviation**: directory reads are NOT supported → use **Glob** (see §6) |
-| `write` | **Write** tool | Overwrite-write; the harness enforces "read before overwriting an existing file" |
-| `edit` | **Edit** tool | Exact string replacement; `old` must match uniquely or the edit fails (narrow the context); supports `replace_all: true` |
-| `glob` | **Glob** tool | Pattern-match to list file paths (e.g. `glob("specs/<slug>/*")` for a task's artifacts) |
-| `grep` | **Grep** tool | ripgrep-based content search; matches with `file:line`, supports regex / glob filters |
-| `run_command` | **Bash** tool | Runs shell commands (Git Bash on Windows); stdout/stderr/exit_code. The only channel for quality gates |
-| `ask_user` | **AskUserQuestion** tool | Supports **batch natively** (up to 4 questions per call) — the contract's batch signature maps 1:1. Mark the recommended option "(Recommended)" and place it first |
-| `spawn_agent` | **Agent** tool (optional) | role mapping in §3 |
-| `create_branch` | **EnterWorktree** tool, else `git checkout -b` via Bash (optional) | worktree isolation; fallback to a feature branch |
-| `check_command` | Bash `command -v <cmd>` (optional) | run once to decide |
-| `web_search` | **WebSearch** tool, **WebFetch** for detail pages (optional) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |
+## 1. Capability Mapping (probe order → fallback, annotation inline)
 
-## 2. Quality-Gate Commands (project-defined)
+> `find_skill` is deliberately absent: per the contract it resolves context-first and the adapter carries no skill-loading logic.
 
-> Four gates in a fixed order: lint → format → type → test. Commands are **project-defined** — replace all four rows per project; the Notes column lists cross-stack examples, never a harness mandate.
+| Capability | Probe order | Fallback + annotation |
+|------------|-------------|-----------------------|
+| `read` | **Read** → `Bash` reading one file | required, no fallback → mark "unsupported capabilities" |
+| `write` | **Write** | overwrite-write; the harness enforces read-before-overwrite |
+| `edit` | **Edit** (exact match, `replace_all`) | narrow the context until `old` is unique — an ambiguous match fails the edit |
+| `glob` | **Glob** → `Bash` `find` / `ls` | pattern listing, e.g. `specs/<slug>/*` |
+| `grep` | **Grep** (ripgrep) → `Bash rg` | returns `file:line`, regex + glob filters |
+| `run_command` | **Bash** (Git Bash on Windows) | required — the only gate channel |
+| `ask_user` | **AskUserQuestion** (batch native, ≤4 questions per call) | headless → conservative option + `⚠️ unable to ask the user; decided on the conservative option` |
+| `spawn_agent` | **Agent** (probe `Explore` for recon) | inline serial → `no sub-agent, inline execution` |
+| `create_branch` | **EnterWorktree** → `Bash` `git checkout -b` | main workspace → `not isolated (no branch capability)` |
+| `check_command` | `Bash` `command -v` | treat as absent, no annotation |
+| `web_search` | **WebSearch** → **WebFetch** for detail pages | `not verified online` in spec Assumptions |
 
-| Gate | Command | Notes |
-|------|---------|-------|
-| lint | `<project-defined>` | Python e.g. `ruff check .`; JS: eslint; Go: gofmt -l |
-| format | `<project-defined>` | Python e.g. `ruff format --check .`; JS: prettier --check |
-| type | `<project-defined>` | Python e.g. `mypy --strict .`; JS: tsc --noEmit |
-| test | `<project-defined>` | Python e.g. `pytest --cov=<module>` (coverage sub-gate enforced only when the project declares a threshold, e.g. `[tool.coverage.report] fail_under`; none declared → plain pass/fail, never invent a number) |
+> Directory reads are not `read`: **Read** errors on a directory — use **Glob** for an entry list. Mark the recommended option "(Recommended)" and put it first in an `ask_user` batch.
 
-- Per-task (🟡/🔴): lint / format / type in full + **affected test subset** (e.g. `pytest tests/<module>/`); full test suite is mandatory at close-out re-verification
-- Gate N/A: declare in spec/intent `## Gate Exemptions` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently
+## 2. Quality-Gate Commands — one entrypoint, four verbs
+
+> The project declares **one** entrypoint; the four gates are its verbs. Record the entrypoint once so the command string never drifts between runs (§0).
+
+```text
+<entrypoint> lint      # project-defined, e.g. ruff check . / eslint
+<entrypoint> format    # check-only by default
+<entrypoint> type      # e.g. mypy --strict . / tsc --noEmit
+<entrypoint> test      # optional subset arg: <entrypoint> test <path>
+```
+
+- Pre-approve `<entrypoint>:*` in `.claude/settings.json` (§0 rule 2) so gate runs never prompt.
+- Per task (🟡/🔴): lint / format / type in full + the **affected test subset**; the full suite is mandatory at close-out re-verification.
+- Coverage sub-gate: only when the project declares a threshold (e.g. `[tool.coverage.report] fail_under`); none declared → plain pass/fail, never invent a number.
+- Gate N/A: declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `Gate Exemptions` and reference `GATE-NA(<gate>):` in the task output — `artifact-check.py` enforces the pairing.
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 
-| Role | Agent type in Claude Code | Notes |
-|------|---------------------------|-------|
-| `explorer` | **Explore** agent (read-only) | output goes to `spec.md` Background (orchestrator **replaces** the placeholder) |
-| `implementer` | **general-purpose** agent | implementation + tests + gates; checks off tasks with pasted gate output |
-| `reviewer` | **general-purpose** agent, or a dedicated code-reviewer agent type if registered | graded findings land in the `## Review` section |
+| Role | Probe | If absent |
+|------|-------|-----------|
+| `explorer` | **Explore** (read-only) → general-purpose with a recon prompt | inline; output still replaces the `spec.md` Background placeholder |
+| `implementer` | **general-purpose** → custom agent type | inline; still checks off tasks with pasted gate output |
+| `reviewer` | dedicated code-reviewer agent type → **general-purpose** + reviewer prompt | inline; graded findings still land in `## Review` |
 
-> If an agent type is not registered → degrade to the generic agent or inline execution; responsibilities and output contracts stay unchanged.
+> Sub-agents run in an isolated context and cannot see the parent's conversation — dispatch prompts carry a task pointer + role discipline only, and the sub-agent reads the artifacts itself.
 
-## 4. Degradation Rule Declarations
+## 4. Runtime Probe Checklist
 
-| Missing capability | Degradation behavior in Claude Code | Annotation |
-|--------------------|-------------------------------------|------------|
-| `ask_user` (headless, e.g. `claude -p`) | pick the most conservative option (fewest irreversible side effects) and record it; never pretend the user confirmed | `⚠️ unable to ask the user; decided on the conservative option` |
-| `spawn_agent` | the orchestrator executes roles inline | `no sub-agent, inline execution` |
-| `create_branch` | change directly on the main workspace | `not isolated (no branch capability)` |
-| `check_command` | run once via Bash | none |
-| `find_skill` | context-first per SKILL.md §7; no library at all → record `skill library unavailable` | environment flag when absent |
-| `web_search` | record `not verified online` in spec Assumptions | none |
-| Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
+> Run once at session start, before the first command. This is a runtime probe, never a build-time claim — the adapter is not "verified against version X".
 
-## 5. Capability-Contract Consistency Self-Check
+- [ ] `read` / `write` / `edit` / `glob` / `grep` / `run_command` resolvable — otherwise stop and mark "unsupported capabilities"
+- [ ] `spawn_agent` present? absent → inline (§3)
+- [ ] `ask_user` unavailable headless (`claude -p`)? → conservative option + annotation
+- [ ] `web_search` enabled? absent → record `not verified online`
+- [ ] gate `<entrypoint>:*` already allowed? if not, add it to `.claude/settings.json` (§0) **before** running any gate
 
-| Required capability | Implementation in Claude Code | Status |
-|---------------------|-------------------------------|--------|
-| read / write / edit / glob / grep | §1 table (Read / Write / Edit / Glob / Grep) | ☑ |
-| run_command | §1 table (Bash) | ☑ |
-| ask_user | §1 table (AskUserQuestion, batch native) | ☑ |
+Record every failed probe as a deviation instead of silently taking the fallback.
 
-## 6. Known Deviations
+## 5. Known Deviations
 
 | Contract semantics | Claude Code reality | Handling |
-|--------------------|--------------------|----------|
-| `read` on a directory returns an entry list | the Read tool errors on directories | directory listing via **Glob**; `read` semantics narrowed to files only |
+|--------------------|---------------------|----------|
+| `read` on a directory returns an entry list | **Read** errors on directories | **Glob** for entry lists; `read` narrowed to files |
+| `ask_user` batch signature | native batch, but capped at 4 questions per call | split into rounds of ≤4 — still one clarification round, never serial turns |
+| read-before-overwrite guardrail | enforced by the harness | no action needed — unlike the other adapters |
+| `create_branch` isolation | **EnterWorktree** may be unavailable in some surfaces | `git checkout -b` via **Bash**, annotation `not isolated` only when neither exists |
 
-> If a deviation becomes blocking for a required capability, annotate "unsupported capabilities" at the top of this file and continue per the degradation rules — never invent a mapping.
+> A deviation that blocks a required capability is annotated at the top of this file and handled by the capability's fallback column — never invented away.

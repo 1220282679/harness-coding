@@ -1,85 +1,89 @@
 ---
 name: harness-coding-adapter-codex
-description: The filled-in adapter layer for the OpenAI Codex CLI harness (v2). Maps the capability contract (7 required + 4 mapped optional) to Codex's concrete tools (read_file / apply_patch / shell / rg / glob_file_search / list_dir / spawn_agent), and declares quality-gate commands and role mapping. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding under Codex (SKILL.md prerequisites).
+description: The filled-in adapter for the OpenAI Codex CLI. Maps the capability contract to Codex's live tool catalogue under a probe-first rule (probe order + fallback, never a promise that a tool exists), declares the single-entrypoint gate command and its pre-approval requirement, and carries the degradation annotation for each capability inline. Read a section lazily — only when a capability mismatch or a gate is actually reached.
 ---
 
 # Adapter Layer: OpenAI Codex CLI
 
-> The filled-in adapter for the OpenAI Codex CLI execution harness. The methodology body (SKILL.md) and the capability contract stay unchanged; this file answers exactly one question: **what concrete Codex mechanism implements each capability in the contract**.
+> Answers exactly one question: **what concrete Codex mechanism implements each capability**. The live tool catalogue of the current session is authoritative; this file supplies only probe order and fallback. Tool names churn across patch releases — probe, never assume.
 >
-> **Version note**: Codex's tool surface evolves quickly (several patch releases a month). The names below were verified against the stable line at **v0.147 (Aug 2026)** — **last verified 2026-08-20**. The authoritative set is the live tool catalogue of the current session — never assume a tool exists without confirming.
+> **Read tiers**: §0–§1 at load (they decide every command); §2–§5 only when that step is actually reached.
 
----
+## 0. Approval & Command Discipline (read before the first command)
 
-## 1. Capability Mapping Table
+Codex asks for approval on every **new** command prefix and writes each approval back into the session's world state, which sits near the front of the prompt. An approval mid-session therefore invalidates the cache for the whole conversation: the next turn re-bills the entire context at full price. Measured on a 371-turn session: cache read fell from ~116k to 3.7k on the turn after each approval, ~$0.24 each, 27 approvals ≈ 58% of all wasted tokens.
 
-> All capabilities except `find_skill` map to Codex primitives as follows (`find_skill` resolves context-first per SKILL.md §7 — no mapping needed). Anything that can't be mapped is marked "unsupported" honestly — never invented.
+1. **One entrypoint per project** — the exact gate string declared in §2, reused verbatim, never retyped with variations.
+2. **Pre-approve it** — register the entrypoint in the approved-prefix list / sandbox allowlist before the session starts. Target: ≤3 approvals per session.
+3. **No nested shells** — `powershell.exe -Command "..."`, `cmd /c "..."`, `bash -c "..."` each mint a new prefix and therefore a new approval. Never wrap a command that way.
+4. **No repeated preamble** — do not re-declare `[Console]::OutputEncoding` or `$ErrorActionPreference` per call; bake them into the entrypoint script.
+5. **One command, one job** — no `;` / `&&` piles of unrelated steps. A 900-character one-liner is a brand-new prefix every time it is retyped.
 
-| Capability | Implementation in Codex | Notes |
-|------------|--------------------------|-------|
-| `read` | **read_file** tool | Reads a single file's content. **Deviation**: directory reads NOT supported → use **list_dir** (see §6). `shell` (`cat`) is a last-resort fallback |
-| `write` | **apply_patch** (create / update) | No standalone overwrite-write tool: create via `*** Add File`, overwrite via `*** Update File` (full V4A diff). Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §6) |
-| `edit` | **apply_patch** (update, V4A diff format) | The `*** Update File` hunk must match uniquely; an ambiguous hunk fails → narrow the context. Equivalent to the contract's unique-match rule |
-| `glob` | **glob_file_search** tool | Native glob file search (e.g. `specs/<slug>/*`); on older builds fall back to `shell` + `find`/`ls` |
-| `grep` | **rg** tool | Native ripgrep tool; on older builds fall back to `shell` + `rg`/`grep -rn` |
-| `run_command` | **shell** / **shell_command** tool | The only channel for quality gates. Execution gated by the harness's approval flow in the interactive TUI |
-| `ask_user` | interactive TUI approval prompts (+ optional MCP elicitation) | **No structured batch question primitive in the core.** Interactive mode: the user reviews/approves every command and file change via the TUI approval prompt. A Claude-Code-style batch question can be added via the `mcp-ask-user-question` MCP server (interactive only); without it, serial asks within the same clarification round. Headless `codex exec`: no human in the loop → degrade per §4 |
-| `spawn_agent` | **spawn_agent** / **wait_agent** / **close_agent** (optional) | Multi-agent GA since CLI **0.115.0 (Mar 2026)**, enabled by default on current builds. Subagents defined as TOML files in `~/.codex/agents/` (global) / `.codex/agents/` (project) (built-ins `default` / `explorer` / `worker`). Without the feature → inline per §4 |
-| `create_branch` | **shell** `git checkout -b <name>`, or native **git** tool (optional) | No worktree primitive; a worktree = `shell` + `git worktree add` |
-| `check_command` | **shell** `command -v <cmd>` (optional) | run once to decide |
-| `web_search` | Codex web search — enable `[tools] web_search = true` in `~/.codex/config.toml` on builds that support it (optional; verify at setup with the live tool catalogue) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |
+## 1. Capability Mapping (probe order → fallback, annotation inline)
 
-## 2. Quality-Gate Commands (project-defined)
+> `find_skill` is deliberately absent: per the contract it resolves context-first and the adapter carries no skill-loading logic.
 
-> Four gates in a fixed order: lint → format → type → test. Commands are **project-defined** — replace all four rows per project; the Notes column lists cross-stack examples, never a harness mandate.
+| Capability | Probe order | Fallback + annotation |
+|------------|-------------|-----------------------|
+| `read` | native file reader → `shell` reading one file | required, no fallback → mark "unsupported capabilities" |
+| `write` | `apply_patch` `*** Add File` → `shell` redirect | required, no fallback |
+| `edit` | `apply_patch` `*** Update File` (unique hunk) | read+write composition in one turn (contract §2) |
+| `glob` | native glob tool → `rg --files` | `shell` + `find` / `ls` |
+| `grep` | native ripgrep tool → `shell rg` | `Select-String` / `grep -rn` |
+| `run_command` | `shell` / `shell_command` / `exec_command` | required — the only gate channel |
+| `ask_user` | TUI approval prompt → `mcp-ask-user-question` | serial asks in one round; headless → `⚠️ unable to ask the user; decided on the conservative option` |
+| `spawn_agent` | `spawn_agent` → `wait_agent` (probe once) | inline, serial → `no sub-agent, inline execution` |
+| `create_branch` | native git tool → `shell git checkout -b` | main workspace → `not isolated (no branch capability)` |
+| `check_command` | `shell` + `command -v` | treat as absent, no annotation |
+| `web_search` | built-in web search, if enabled for the build | `not verified online` in spec Assumptions |
 
-| Gate | Command | Notes |
-|------|---------|-------|
-| lint | `<project-defined>` | Python e.g. `ruff check .`; JS: eslint; Go: gofmt -l |
-| format | `<project-defined>` | Python e.g. `ruff format --check .`; JS: prettier --check |
-| type | `<project-defined>` | Python e.g. `mypy --strict .`; JS: tsc --noEmit |
-| test | `<project-defined>` | Python e.g. `pytest --cov=<module>` (coverage sub-gate enforced only when the project declares a threshold, e.g. `[tool.coverage.report] fail_under`; none declared → plain pass/fail, never invent a number) |
+> Directory reads are not `read`: use `list_dir` when present, else `shell` listing. `write`/`edit` have no dedicated tool — both go through `apply_patch`, where unique-match means an unambiguous hunk.
 
-- Per-task (🟡/🔴): lint / format / type in full + **affected test subset** (e.g. `pytest tests/<module>/`); full test suite is mandatory at close-out re-verification
-- Gate N/A: declare in spec/intent `## Gate Exemptions` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently
+## 2. Quality-Gate Commands — one entrypoint, four verbs
+
+> The project declares **one** entrypoint; the four gates are its verbs. The adapter records the entrypoint once and the gate table carries only verbs, so the command string never drifts between runs (§0).
+
+```text
+<entrypoint> lint      # project-defined, e.g. ruff check . / eslint
+<entrypoint> format    # check-only by default
+<entrypoint> type      # e.g. mypy --strict . / tsc --noEmit
+<entrypoint> test      # optional subset arg: <entrypoint> test <path>
+```
+
+- Pre-approve `<entrypoint>` (§0 rule 2) so gate runs never raise an approval prompt.
+- Per task (🟡/🔴): lint / format / type in full + the **affected test subset**; the full suite is mandatory at close-out re-verification.
+- Coverage sub-gate: only when the project declares a threshold (e.g. `[tool.coverage.report] fail_under`); none declared → plain pass/fail, never invent a number.
+- Gate N/A: declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `Gate Exemptions` and reference `GATE-NA(<gate>):` in the task output — `artifact-check.py` enforces the pairing.
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 
-| Role | Agent type in Codex | Notes |
-|------|----------------------|-------|
-| `explorer` | **`explorer`** built-in subagent | read-only recon; output goes to `spec.md` Background (orchestrator **replaces** the placeholder) |
-| `implementer` | **`worker`** built-in subagent, or a custom TOML agent in `.codex/agents/` | implementation + tests + gates; checks off tasks with pasted gate output |
-| `reviewer` | a custom read-only TOML subagent (e.g. `.codex/agents/reviewer.toml`), else **`default`** with the reviewer dispatch prompt | graded findings land in the `## Review` section; the reviewer agent must be allowed to run the gates |
+| Role | Probe | If absent |
+|------|-------|-----------|
+| `explorer` | `explorer` built-in → read-only custom agent | inline; output still replaces the `spec.md` Background placeholder |
+| `implementer` | `worker` built-in → custom TOML agent | inline; still checks off tasks with pasted gate output |
+| `reviewer` | read-only custom agent (`.codex/agents/reviewer.toml`) → `default` + reviewer prompt | inline; graded findings still land in `## Review` |
 
-> Custom subagents are TOML files in `~/.codex/agents/` (global) / `.codex/agents/` (project); restart Codex after adding one.
+> Custom subagents are TOML files under `~/.codex/agents/` (global) or `.codex/agents/` (project); restart Codex after adding one. Responsibilities and output contracts are unchanged either way.
 
-## 4. Degradation Rule Declarations
+## 4. Runtime Probe Checklist
 
-| Missing capability | Degradation behavior in Codex | Annotation |
-|--------------------|-------------------------------|------------|
-| `ask_user` (headless exec) | pick the most conservative option and record it; never pretend the user confirmed | `⚠️ unable to ask the user; decided on the conservative option` |
-| `spawn_agent` | the orchestrator executes roles inline (also when `multi_agent` is off) | `no sub-agent, inline execution` |
-| `create_branch` | change directly on the main workspace (or `shell` git branch) | `not isolated (no branch capability)` |
-| `check_command` | run once via shell | none |
-| `find_skill` | context-first per SKILL.md §7; no library at all → record `skill library unavailable` | environment flag when absent |
-| `web_search` | record `not verified online` in spec Assumptions | none |
-| Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
+> Run once at session start, before the first command. This is a runtime probe, never a build-time claim — the adapter is not "verified against version X".
 
-## 5. Capability-Contract Consistency Self-Check
+- [ ] `read` / `write` / `edit` / `glob` / `grep` / `run_command` resolvable — otherwise stop and mark "unsupported capabilities"
+- [ ] `spawn_agent` present? absent → inline (§3)
+- [ ] `ask_user` batch primitive present? absent → serial, or the headless annotation
+- [ ] `web_search` enabled? absent → record `not verified online`
+- [ ] gate `<entrypoint>` already approved? if not, get it pre-approved (§0) **before** running any gate
 
-| Required capability | Implementation in Codex | Status |
-|---------------------|--------------------------|--------|
-| read / write / edit / glob / grep | §1 table (read_file / apply_patch / rg / glob_file_search) | ☑ |
-| run_command | §1 table (shell / shell_command) | ☑ |
-| ask_user | §1 table (interactive TUI + optional MCP elicitation; batch via MCP, else serial within one round) | ☐* — interactive only; headless degrades per §4 |
+Record every failed probe as a deviation instead of silently taking the fallback.
 
-## 6. Known Deviations
+## 5. Known Deviations
 
 | Contract semantics | Codex reality | Handling |
 |--------------------|---------------|----------|
-| `read` on a directory returns an entry list | `read_file` errors on directories | directory listing via **list_dir**; `read` semantics narrowed to files only |
-| `write` / `edit` are dedicated tools | both realized via **apply_patch** (V4A diff) | create via `*** Add File`, update via `*** Update File`; unique-match = an unambiguous hunk |
-| read-before-overwrite guardrail | not enforced by the harness | the orchestrator must `read` the target before overwriting |
-| `ask_user` batch signature | no core batch primitive | interactive TUI approvals; `mcp-ask-user-question` for structured questions; else serial within one clarification round; headless → degrade per §4 |
+| `read` on a directory returns an entry list | the native reader errors on directories | `list_dir`; `read` narrowed to files |
+| `write` / `edit` are dedicated tools | both realized via `apply_patch` | `*** Add File` / `*** Update File`, unique hunk = unambiguous hunk |
+| read-before-overwrite guardrail | not enforced by the harness | the orchestrator must read the target before overwriting |
+| `ask_user` batch signature | no core batch primitive | TUI approvals; `mcp-ask-user-question`; else serial within one round |
 
-> If a deviation becomes blocking for a required capability, annotate "unsupported capabilities" at the top of this file and continue per the degradation rules — never invent a mapping.
+> A deviation that blocks a required capability is annotated at the top of this file and handled by the capability's fallback column — never invented away.

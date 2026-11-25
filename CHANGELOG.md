@@ -1,11 +1,37 @@
 ---
 name: harness-coding-changelog
-description: Release history for the harness-coding skill. Covers the v2 artifact-driven rewrite (SDD), the dispatch-protocol hardening, and the quality-gate scenario-adaptation pass (Gate N/A, incremental gates, coverage source, characterization baseline).
+description: Release history for the harness-coding skill. Covers the v2 artifact-driven rewrite (SDD), the dispatch-protocol hardening, the quality-gate scenario-adaptation pass (Gate N/A, incremental gates, coverage source, characterization baseline), and the v2.5 session-discipline pass derived from measured cache-hit data.
 ---
 
 # Changelog
 
 > **发布策略**（2026-11-17 起采用批量发布制）：版本 = 发布动作，不是变更动作（1 version = N chains）。日常变更只 commit + 全量门禁，latest 滚动 Release 由 CI 自动覆盖；CHANGELOG 在发布时一次性汇总，每条变更一行，根因长叙述见 `specs/` 各链的 tasks 证据与 Review 区。
+
+## v2.5.0 — 2026-11-25
+
+Rule-level pass driven by a measured cache defect, not by review taste. 235 real Codex sessions that loaded this skill were replayed turn-by-turn (cc-switch `proxy_request_logs` × `~/.codex/sessions` rollout `token_count`), and one 371-turn chain showed 41.7M input at 90.95% cache hit with **58% of all uncached tokens concentrated in 25 turns**. Every one of those turns followed an approval or an abort: approvals write back to world state, which sits at the front of the prompt, so the whole prefix behind it stops hitting — the round after an approval drops from ~116k cached to 3.7k, and the 256-token gap between the two observed floor values (3,712 / 3,968) matches one approval-prefix entry. No spec chain was opened: the change target is this skill's own rules, not a host project.
+
+### Added
+
+- **§0 Load Protocol**: loading reads SKILL.md only — contract §3 at the first gate, adapter §0–§2 before the first `run_command`, `flow.md` at the clarification gate and at close-out, `conditional-skills.md` only when `find_skill` misses. On-load cost 28.4 KB → 7.0 KB (-75%); the old "read capability-contract.md and the adapter on load" prerequisite was the largest fixed prefix every session paid, and 157 of 235 sessions were short enough for it to dominate
+- **§8 Session Discipline**: one never/instead table replacing three prose blocks — replay the gate entry verbatim (≤3 approvals per session), never nest shells (each nesting mints a new prefix), never re-declare encoding/error policy/`cd` per call, one command one job, never re-read injected `AGENTS.md`/`CLAUDE.md` (it was re-read 11 times in one session), `grep` before reading a file, split a long `tasks.md` into per-task files, ≤12 tool calls per turn, checkpoint at ~100k context or a phase boundary. Measured waste behind it: 366 commands averaging 888 characters, 322 over 200, 18 nested `powershell.exe -Command`, 172 whole-file shell dumps, 4 compactions at ~180k each
+- **references/flow.md**: the channel edge cases where §2's criteria disagree — one file touching a schema/public signature/config contract → 🔴, pure docs across ten files → 🟢, dependency/build/CI config → 🟡, mechanical rename across modules → 🟡, a bug fix needing regression pinning → 🟡, an audit the user expects a fix from → 🟡, an AC set that will not fit one paragraph → 🔴 — plus the clarification-gate protocol, info-gathering order, slug/continuation/upgrade and close-out re-verification moved out of SKILL.md
+- **references/conditional-skills.md**: the 8 skill slots, read only when `find_skill` misses
+- **Adapter §0 approval discipline**, spelled per harness rather than in general: claude-code (`.claude/settings.json` `Bash(<entrypoint>:*)` prefix match — `bash -c "…"` matches nothing, so it asks every time), opencode (`permission.bash` glob → allow/ask/deny, and `edit` gates write+edit as one key), workbuddy (no repo-level permission file, and Bash-vs-PowerShell spellings of one gate are two prefixes two approvals — one shell per project), codex (approval writes back to world state)
+
+### Changed
+
+- **Adapters move from assertion to probe**: §1 became probe-order → fallback, and the old §5 "Capability-Contract Consistency Self-Check" (a compile-time assertion table) was replaced by a §4 runtime probe list. The codex adapter had asserted `read_file` / `apply_patch` / `spawn_agent` while the session it governed exposed only `exec_command` — 172 whole-file shell dumps followed from trusting that table
+- **SKILL.md 8179 → 6839 B (-16%)** while §0+§8 added 1.7 KB of new rules: `## Constraints` dissolved into §1/§2/§3/§4 with no content lost, and §4's gate detail — a verbatim duplicate of `capability-contract.md` §3 — became a pointer. §4 and §7 keep their numbers as forwarding stubs so the 12 hardcoded `SKILL.md §7` references across adapters, contract and `find-skill.py` stay valid: zero script changes
+- **`_adapter-template.md` description**: "Read before loading harness-coding" → "Read lazily" — the template was the source that would have regrown the old prerequisite in every new adapter
+- **§2 gains a `When` column and drops `Close-out`** (close-out depth lives in `output-contract.md`); the phase chain stays inline because it exists only in that table — `flow.md`'s channel table is signals→channels, not stage order
+
+### Honesty notes
+
+- **The size target was missed and is being dropped, not deferred.** 3 KB and 4.2 KB were both attempted and rejected: every remaining kilobyte is a decision rule (channel criteria, the `GATE-NA(<gate>)` pairing syntax `artifact-check` parses, the four hard constraints), and cutting them trades a silent misclassification for ~$0.03 of cache prefix in a 200-turn session. `capability-contract.md` also stayed at 11.5 KB — laziness already removed it from on-load cost, so compressing it could only delete degradation rules
+- **Short sessions cannot reach 95% and should not be measured against it**: 157 of 235 sessions ran ≤30 turns with a ceiling of 90.7%, because turn one pays 20–24k uncached tokens. Read the target per band — ≤30 turns ≥90%, >60 turns ≥95%, aggregate ≥97%
+- The data is one machine's Codex usage. The *mechanism* (approval → prefix rewrite → collapse) is structural and the fix is harness-level; the exact percentages are not portable
+- The §2 de-duplication against `flow.md` went the wrong way first: keeping both tables as "complementary" was claimed, then falsified on comparison — they were 95% line-by-line duplicates. Resolution was a split of duties, not a choice between deleting one or keeping both
 
 ## v2.4.1 — 2026-11-23
 

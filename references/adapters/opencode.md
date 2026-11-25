@@ -1,89 +1,91 @@
 ---
 name: harness-coding-adapter-opencode
-description: The filled-in adapter layer for the opencode harness (v2). Maps the capability contract (7 required + 4 mapped optional) to opencode's concrete tools (tool.read / tool.write / tool.edit / tool.apply_patch / tool.bash / tool.grep / tool.glob / tool.list / tool.question / tool.task / tool.skill), and declares quality-gate commands and role mapping. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding under opencode (SKILL.md prerequisites).
+description: The filled-in adapter for the opencode harness. Maps the capability contract to opencode's live tool catalogue under a probe-first rule (probe order + fallback, never a promise that a tool exists), declares the single-entrypoint gate command and its pre-approval requirement via `opencode.json` permission globs, and carries the degradation annotation for each capability inline. Read a section lazily — only when a capability mismatch or a gate is actually reached.
 ---
 
 # Adapter Layer: opencode
 
-> The filled-in adapter for the opencode execution harness. The methodology body (SKILL.md) and the capability contract stay unchanged; this file answers exactly one question: **what concrete opencode mechanism implements each capability in the contract**.
+> Answers exactly one question: **what concrete opencode mechanism implements each capability**. The live tool catalogue of the current session is authoritative; this file supplies only probe order and fallback.
 >
-> **Version note**: opencode's tool surface and config schema evolve across releases; the tool names below follow the convention as of this writing. Directory-read behavior changed in **v1.1.60** (Feb 2026): `tool.read` lists directory contents natively (**last verified 2026-08-20**). The authoritative set is the live tool catalogue of the current session — never assume a tool exists without confirming.
+> **Read tiers**: §0–§1 before the first command (they decide every command); §2 at the first gate; §3 at dispatch; §4–§5 as reference.
 
----
+## 0. Approval & Command Discipline (read before the first command)
 
-## 1. Capability Mapping Table
+opencode decides every `tool.bash` call against `permission.bash` in `opencode.json` — a map of **command glob → `allow` / `ask` / `deny`**. A command whose head matches no `allow` glob falls to `ask`. Approval state is part of the session's configuration surface, so an approval taken mid-run changes what the harness injects — treat it as a prefix change, and the whole context behind it as cold on the next turn.
 
-> All capabilities except `find_skill` map to opencode primitives as follows (`find_skill` resolves context-first per SKILL.md §7 — no mapping needed). Anything that can't be mapped is marked "unsupported" honestly — never invented. Tool names follow opencode's `tool.<name>` convention; per-tool permission (`allow` / `ask` / `deny`) is configured in the harness config (see §5).
+1. **One entrypoint per project** — the exact gate string declared in §2, reused verbatim.
+2. **Pre-approve it** — add the entrypoint glob (e.g. `"./gate *": "allow"`) to `opencode.json` **before** the session. Target: ≤3 approvals per session.
+3. **No nested shells** — `bash -c "..."` does not match the entrypoint glob, so it prompts every time. Never wrap a command that way.
+4. **No repeated preamble** — no per-call `export` / `cd` / `set -e`; bake it into the entrypoint script (§2). The same applies to `write` / `edit`: they are gated by the single `edit` permission key, so widen that key once rather than approving file by file.
+5. **One command, one job** — no `;` / `&&` piles; a retyped one-liner is a new prefix every time.
 
-| Capability | Implementation in opencode | Notes |
-|------------|-----------------------------|-------|
-| `read` | **tool.read** | Returns file content tagged with line numbers; also lists directory contents on v1.1.60+ natively. **tool.list** remains available for explicit directory browsing (see §7) |
-| `write` | **tool.write** | Create / overwrite a file; gated by the `edit` permission key. Read-before-overwrite is a contract convention, **not enforced** → follow it manually (see §7) |
-| `edit` | **tool.edit** (string replacement) or **tool.apply_patch** (unified diff) | Unique-match rule: a `tool.edit` with multiple matches needs a narrower context. Both gated by the `edit` permission key |
-| `glob` | **tool.glob** | pattern-match file listing (e.g. `specs/<slug>/*`) |
-| `grep` | **tool.grep** | regex content search, ripgrep-style; matches with file:line |
-| `run_command` | **tool.bash** | The only channel for quality gates. Permission `bash` supports an allow/ask/deny mode plus a command glob-pattern map |
-| `ask_user` | **tool.question** | Asks the user mid-execution. Batch: `tool.question` handles one question per call → serial asks within the same clarification round (see §7). When unavailable (non-interactive run) → degrade per §4 |
-| `spawn_agent` | **tool.task** (optional) | Spawns a subagent defined in `.opencode/agents/` (or `~/.config/opencode/agents/`); also invoked via `@<name>` mentions. Subagents can use only built-in tools (see §7) |
-| `create_branch` | **tool.bash** `git checkout -b <name>` (optional) | no native worktree primitive; a worktree = `tool.bash` + `git worktree add` |
-| `check_command` | **tool.bash** `command -v <cmd>` (optional) | run once to decide |
-| `web_search` | No bundled search primitive → via an MCP search plugin if configured, else **tool.bash** + `curl` against an allowed API (optional; verify at setup) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |
+## 1. Capability Mapping (probe order → fallback, annotation inline)
 
-## 2. Quality-Gate Commands (project-defined)
+> `find_skill` is deliberately absent: per the contract it resolves context-first and the adapter carries no skill-loading logic.
 
-> Four gates in a fixed order: lint → format → type → test. Commands are **project-defined** — replace all four rows per project; the Notes column lists cross-stack examples, never a harness mandate.
+| Capability | Probe order | Fallback + annotation |
+|------------|-------------|-----------------------|
+| `read` | **tool.read** (file content with line numbers) | required, no fallback → mark "unsupported capabilities" |
+| `write` | **tool.write** | create/overwrite; read-before-overwrite is a convention, **not enforced** — follow it manually |
+| `edit` | **tool.edit** (string replacement) → **tool.apply_patch** (unified diff) | unique-match rule: narrow the context until `old` matches once |
+| `glob` | **tool.glob** → **tool.bash** `find` | pattern listing, e.g. `specs/<slug>/*` |
+| `grep` | **tool.grep** (ripgrep-style) | returns `file:line`, regex + glob filters |
+| `run_command` | **tool.bash** | required — the only gate channel |
+| `ask_user` | **tool.question** (one question per call) | serial asks **within one clarification round**; unavailable (non-interactive) → conservative option + `⚠️ unable to ask the user; decided on the conservative option` |
+| `spawn_agent` | **tool.task** (agents in `.opencode/agents/` or `~/.config/opencode/agents/`; `@<name>` mention) | inline serial → `no sub-agent, inline execution` |
+| `create_branch` | **tool.bash** `git checkout -b` → `git worktree add` | main workspace → `not isolated (no branch capability)` |
+| `check_command` | **tool.bash** `command -v` | treat as absent, no annotation |
+| `web_search` | configured MCP search plugin → **tool.bash** + `curl` against an allowed API | `not verified online` in spec Assumptions |
 
-| Gate | Command | Notes |
-|------|---------|-------|
-| lint | `<project-defined>` | Python e.g. `ruff check .`; JS: eslint; Go: gofmt -l |
-| format | `<project-defined>` | Python e.g. `ruff format --check .`; JS: prettier --check |
-| type | `<project-defined>` | Python e.g. `mypy --strict .`; JS: tsc --noEmit |
-| test | `<project-defined>` | Python e.g. `pytest --cov=<module>` (coverage sub-gate enforced only when the project declares a threshold, e.g. `[tool.coverage.report] fail_under`; none declared → plain pass/fail, never invent a number) |
+> Directory entry lists come from **tool.read** on current builds and from **tool.list** on older ones — probe once, then stay with what answered. Sub-agents can use built-in tools only (MCP tools need a bridge plugin).
 
-- Per-task (🟡/🔴): lint / format / type in full + **affected test subset** (e.g. `pytest tests/<module>/`); full test suite is mandatory at close-out re-verification
-- Gate N/A: declare in spec/intent `## Gate Exemptions` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently
+## 2. Quality-Gate Commands — one entrypoint, four verbs
+
+> The project declares **one** entrypoint; the four gates are its verbs. Record the entrypoint once so the command string never drifts between runs (§0).
+
+```text
+<entrypoint> lint      # project-defined, e.g. ruff check . / eslint
+<entrypoint> format    # check-only by default
+<entrypoint> type      # e.g. mypy --strict . / tsc --noEmit
+<entrypoint> test      # optional subset arg: <entrypoint> test <path>
+```
+
+- Pre-approve `<entrypoint>` in `opencode.json` `permission.bash` (§0 rule 2) so gate runs never prompt.
+- Per task (🟡/🔴): lint / format / type in full + the **affected test subset**; the full suite is mandatory at close-out re-verification.
+- Coverage sub-gate: only when the project declares a threshold (e.g. `[tool.coverage.report] fail_under`); none declared → plain pass/fail, never invent a number.
+- Gate N/A: declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `Gate Exemptions` and reference `GATE-NA(<gate>):` in the task output — `artifact-check.py` enforces the pairing.
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 
-> Roles are dispatched via **tool.task**; subagents are gated by the `task` permission key. Custom agents are Markdown files with YAML frontmatter in `.opencode/agents/<name>.md` (project) or `~/.config/opencode/agents/<name>.md` (global); the filename becomes the agent name. Scaffold with `opencode agent create`.
+| Role | Probe | If absent |
+|------|-------|-----------|
+| `explorer` | built-in **`explore`** subagent (read / grep / glob / list) | inline; output still replaces the `spec.md` Background placeholder |
+| `implementer` | built-in **`general`** → custom agent in `.opencode/agents/` | inline; still checks off tasks with pasted gate output |
+| `reviewer` | custom read-only agent (`mode: subagent`, `bash` allowed for gate rechecks) → **`general`** + reviewer prompt | inline; graded findings still land in `## Review` |
 
-| Role | Agent type in opencode | Notes |
-|------|-------------------------|-------|
-| `explorer` | built-in **`explore`** subagent | read-only: read / grep / glob / list; output goes to `spec.md` Background (orchestrator **replaces** the placeholder) |
-| `implementer` | built-in **`general`** subagent, or a custom agent in `.opencode/agents/` | implementation + tests + gates; checks off tasks with pasted gate output |
-| `reviewer` | a custom read-only reviewer agent (e.g. `.opencode/agents/reviewer.md`, `mode: subagent`, `permission` allows `bash` for gate rechecks), else **`general`** with the reviewer dispatch prompt | graded findings land in the `## Review` section |
+> Custom agents are Markdown files with YAML frontmatter; the filename becomes the agent name (`opencode agent create` scaffolds one). The `task` permission key gates all dispatches.
 
-## 4. Degradation Rule Declarations
+## 4. Runtime Probe Checklist
 
-| Missing capability | Degradation behavior in opencode | Annotation |
-|--------------------|----------------------------------|------------|
-| `ask_user` (`question` unavailable / non-interactive run) | pick the most conservative option and record it; never pretend the user confirmed | `⚠️ unable to ask the user; decided on the conservative option` |
-| `spawn_agent` | the orchestrator executes roles inline (also when the `task` permission denies) | `no sub-agent, inline execution` |
-| `create_branch` | change directly on the main workspace (or `tool.bash` git branch) | `not isolated (no branch capability)` |
-| `check_command` | run once via tool.bash | none |
-| `find_skill` | context-first per SKILL.md §7; no library at all → record `skill library unavailable` | environment flag when absent |
-| `web_search` | record `not verified online` in spec Assumptions | none |
-| Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
+> Run once at session start, before the first command. This is a runtime probe, never a build-time claim — the adapter is not "verified against version X".
 
-## 5. Permission Config for the Validation Scripts
+- [ ] `read` / `write` / `edit` / `glob` / `grep` / `run_command` resolvable — otherwise stop and mark "unsupported capabilities"
+- [ ] directory entry lists: `tool.read` or `tool.list`? probe once, stay with what answered
+- [ ] `spawn_agent` (`task` permission not `deny`)? absent → inline (§3)
+- [ ] `ask_user` (`question` available, interactive run)? absent → serial within one round, or the headless annotation
+- [ ] `web_search` plugin configured? absent → record `not verified online`
+- [ ] gate `<entrypoint>` glob already `allow`? if not, add it to `opencode.json` (§0) **before** running any gate
 
-> The repo ships an `opencode.json` at the repo root with `permission.bash` allow patterns for `scripts/artifact-check.py` / `scripts/derive-report.py` / `scripts/find-skill.py` — the opencode equivalent of `.claude/settings.json` under Claude Code. When the skill is installed into a target project, declare the same allow patterns in that project's own config.
+Record every failed probe as a deviation instead of silently taking the fallback.
 
-## 6. Capability-Contract Consistency Self-Check
-
-| Required capability | Implementation in opencode | Status |
-|---------------------|-----------------------------|--------|
-| read / write / edit / glob / grep | §1 table (tool.read / tool.write / tool.edit + tool.apply_patch / tool.glob / tool.grep) | ☑ |
-| run_command | §1 table (tool.bash) | ☑ |
-| ask_user | §1 table (tool.question; serial within one clarification round) | ☑ |
-
-## 7. Known Deviations
+## 5. Known Deviations
 
 | Contract semantics | opencode reality | Handling |
 |--------------------|------------------|----------|
-| `read` on a directory returns an entry list | `tool.read` lists directory contents on v1.1.60+; older builds read a single file only | met natively on current builds; older builds fall back to **tool.list** |
-| read-before-overwrite guardrail | not enforced by the harness | the orchestrator must `read` the target before overwriting |
-| `ask_user` batch signature | `tool.question` handles one question per call | serial asks within the same clarification round; when unavailable, degrade per §4 |
-| sub-agent environment | subagents can use only built-in tools (MCP tools need a bridge plugin) | the three roles only need built-in tools |
+| `read` on a directory returns an entry list | `tool.read` lists entries on current builds; older builds read a single file | current: `read`; older: **tool.list** |
+| read-before-overwrite guardrail | not enforced by the harness | the orchestrator must read the target before overwriting |
+| `ask_user` batch signature | `tool.question` takes one question per call | serial asks inside the same clarification round — same round, not extra turns |
+| sub-agent environment | subagents reach built-in tools only (MCP needs a bridge) | the three roles need built-in tools only |
+| validation-script permissions | no bundled rule for the three runtime scripts | the repo ships `opencode.json` with the three allow globs; a project install must declare the same |
 
-> If a deviation becomes blocking for a required capability, annotate "unsupported capabilities" at the top of this file and continue per the degradation rules — never invent a mapping.
+> A deviation that blocks a required capability is annotated at the top of this file and handled by the capability's fallback column — never invented away.

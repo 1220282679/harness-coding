@@ -1,89 +1,90 @@
 ---
 name: harness-coding-adapter-workbuddy
-description: The filled-in adapter layer for the WorkBuddy harness (v2). Maps the capability contract (7 required + 4 mapped optional) to WorkBuddy's concrete tools (Read / Write / Edit / Glob / Grep / Bash / PowerShell / AskUserQuestion / Agent / WebSearch / WebFetch / ToolSearch + Skill), and declares quality-gate commands and role mapping. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding under WorkBuddy (SKILL.md prerequisites).
+description: The filled-in adapter for the WorkBuddy harness. Maps the capability contract to WorkBuddy's live tool catalogue under a probe-first rule (probe order + fallback, never a promise that a tool exists), declares the single-entrypoint gate command and how to pre-approve it when the surface has no permission file, and carries the degradation annotation for each capability inline. Read a section lazily — only when a capability mismatch or a gate is actually reached.
 ---
 
 # Adapter Layer: WorkBuddy
 
-> The filled-in adapter for the WorkBuddy execution harness. The methodology body (SKILL.md) and the capability contract stay unchanged; this file answers exactly one question: **what concrete WorkBuddy mechanism implements each capability in the contract**.
+> Answers exactly one question: **what concrete WorkBuddy mechanism implements each capability**. The live tool catalogue of the current session is authoritative; this file supplies only probe order and fallback.
 >
-> **Version note**: tool names verified against the **live WorkBuddy session authoring this adapter (2026-11-17)** — the strongest verification an adapter can carry. The authoritative set is still the live tool catalogue of the current session; never assume a tool exists without confirming.
+> **Read tiers**: §0–§1 before the first command (they decide every command); §2 at the first gate; §3 at dispatch; §4–§5 as reference.
 
----
+## 0. Approval & Command Discipline (read before the first command)
 
-## 1. Capability Mapping Table
+WorkBuddy prompts on the **first use of a command**, and it exposes **two** command tools — **Bash** (POSIX sh / Git Bash) and **PowerShell** (Windows-native). The same job expressed through the other shell is a different command, so mixing them multiplies the prompts. There is no repo-shipped permission file (unlike `.claude/settings.json` / `opencode.json`): approval is per session, and the approval state is part of what the harness injects — treat it as a prefix change.
 
-> All capabilities except `find_skill` map to WorkBuddy primitives as follows (`find_skill` resolves context-first per SKILL.md §7 — no mapping needed). Anything that can't be mapped is marked "unsupported" honestly — never invented.
+1. **One entrypoint per project** — the exact gate string declared in §2, reused verbatim.
+2. **Pre-approve it once** — approve the entrypoint and the three runtime scripts at session start (or add allow rules if the surface offers them). Target: ≤3 approvals per session; never widen the allowlist beyond the entrypoint + `scripts/{artifact-check,derive-report,find-skill}.py`.
+3. **Pick one shell per project** — decide Bash *or* PowerShell for the gate entrypoint and never express the same gate the other way; two spellings are two prefixes and two prompts.
+4. **No nested shells** — `bash -c "..."` / `powershell -Command "..."` / `cmd /c "..."` each mint a new command head and prompt again. Never wrap a command that way.
+5. **No repeated preamble** — `[Console]::OutputEncoding`, `$ErrorActionPreference`, `chcp`, `set -e` belong inside the entrypoint script, not in front of every call. A sandbox-rejected command needs user-approved escalation: that counts as an `ask_user` decision, is recorded, and is never used to bypass a failed gate.
 
-| Capability | Implementation in WorkBuddy | Notes |
-|------------|------------------------------|-------|
-| `read` | **Read** tool | Reads a single file with line numbers. **Deviation**: directory reads are NOT supported → use **Glob** (see §7); images via **ViewImage** |
-| `write` | **Write** tool | Create / overwrite; the harness enforces "read before overwriting an existing file" |
-| `edit` | **Edit** tool | Exact string replacement; `old` must match uniquely or the edit fails (narrow the context); supports `replace_all: true` |
-| `glob` | **Glob** tool | Pattern-match to list file paths (e.g. `glob("specs/<slug>/*")` for a task's artifacts) |
-| `grep` | **Grep** tool | ripgrep-based content search; matches with `file:line`, supports regex / glob filters |
-| `run_command` | **Bash** tool (POSIX sh; Git Bash on Windows), **PowerShell** tool for Windows-native tasks | stdout/stderr/exit_code. The only channel for quality gates. Bash runs sandboxed by default; a command the sandbox rejects may be re-run with explicit user-approved escalation — treat that as an `ask_user` decision, never escalate silently |
-| `ask_user` | **AskUserQuestion** tool | Supports **batch natively** (up to 4 questions per call, 2–4 options each, recommended first labeled "(Recommended)") — the contract's batch signature maps 1:1 |
-| `spawn_agent` | **Agent** tool (optional) | role mapping in §3; sub-agents run in isolated context |
-| `create_branch` | **Bash** `git checkout -b <name>` (optional) | no native worktree primitive; a worktree = Bash + `git worktree add` |
-| `check_command` | Bash `command -v <cmd>` (optional) | run once to decide |
-| `web_search` | **WebSearch** tool, **WebFetch** for detail pages (optional) | results entering a spec must carry source + retrieval time; AC stays locally executable; missing/degraded → record `not verified online` in spec Assumptions |
+## 1. Capability Mapping (probe order → fallback, annotation inline)
 
-## 2. Quality-Gate Commands (project-defined)
+> `find_skill` is deliberately absent: per the contract it resolves context-first (native **Skill** tool + **ToolSearch** for deferred discovery) and the adapter carries no skill-loading logic.
 
-> Four gates in a fixed order: lint → format → type → test. Commands are **project-defined** — replace all four rows per project; the Notes column lists cross-stack examples, never a harness mandate.
+| Capability | Probe order | Fallback + annotation |
+|------------|-------------|-----------------------|
+| `read` | **Read** (file with line numbers; **ViewImage** for images) | required, no fallback → mark "unsupported capabilities" |
+| `write` | **Write** | create/overwrite; the harness enforces read-before-overwrite |
+| `edit` | **Edit** (exact match, `replace_all`) | narrow the context until `old` is unique |
+| `glob` | **Glob** → Bash `find` | pattern listing, e.g. `specs/<slug>/*` |
+| `grep` | **Grep** (ripgrep) → Bash `grep -rn` | returns `file:line`, regex + glob filters |
+| `run_command` | **Bash** (POSIX, Git Bash) → **PowerShell** for Windows-native tasks | required — the only gate channel; Bash is sandboxed by default |
+| `ask_user` | **AskUserQuestion** (batch native, ≤4 questions, 2–4 options each, recommended first) | headless → conservative option + `⚠️ unable to ask the user; decided on the conservative option` |
+| `spawn_agent` | **Agent** (probe `Explore` for recon) | inline serial → `no sub-agent, inline execution` |
+| `create_branch` | Bash `git checkout -b` → `git worktree add` | main workspace → `not isolated (no branch capability)` |
+| `check_command` | Bash / PowerShell `command -v` / `Get-Command` | treat as absent, no annotation |
+| `web_search` | **WebSearch** → **WebFetch** for detail pages | `not verified online` in spec Assumptions |
 
-| Gate | Command | Notes |
-|------|---------|-------|
-| lint | `<project-defined>` | Python e.g. `ruff check .`; JS: eslint; Go: gofmt -l |
-| format | `<project-defined>` | Python e.g. `ruff format --check .`; JS: prettier --check |
-| type | `<project-defined>` | Python e.g. `mypy --strict .`; JS: tsc --noEmit |
-| test | `<project-defined>` | Python e.g. `pytest --cov=<module>` (coverage sub-gate enforced only when the project declares a threshold, e.g. `[tool.coverage.report] fail_under`; none declared → plain pass/fail, never invent a number) |
+> Directory reads are not `read`: use **Glob** for an entry list. The native task tools (TaskCreate / TaskUpdate / TaskList) may mirror progress for the user but **never** become the source of truth — checkboxes in `tasks.md` / `intent.md` stay canonical.
 
-- Per-task (🟡/🔴): lint / format / type in full + **affected test subset** (e.g. `pytest tests/<module>/`); full test suite is mandatory at close-out re-verification
-- Gate N/A: declare in spec/intent `## Gate Exemptions` with a reason, reference `GATE-NA(<gate>):` in the task's pasted output — `artifact-check.py` enforces the pairing; never skip silently
+## 2. Quality-Gate Commands — one entrypoint, four verbs
+
+> The project declares **one** entrypoint; the four gates are its verbs. Record the entrypoint once so the command string never drifts between runs (§0).
+
+```text
+<entrypoint> lint      # project-defined, e.g. ruff check . / eslint
+<entrypoint> format    # check-only by default
+<entrypoint> type      # e.g. mypy --strict . / tsc --noEmit
+<entrypoint> test      # optional subset arg: <entrypoint> test <path>
+```
+
+- Pre-approve `<entrypoint>` (§0 rule 2) so gate runs never prompt.
+- Per task (🟡/🔴): lint / format / type in full + the **affected test subset**; the full suite is mandatory at close-out re-verification.
+- Coverage sub-gate: only when the project declares a threshold (e.g. `[tool.coverage.report] fail_under`); none declared → plain pass/fail, never invent a number.
+- Gate N/A: declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `Gate Exemptions` and reference `GATE-NA(<gate>):` in the task output — `artifact-check.py` enforces the pairing.
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 
-| Role | Agent type in WorkBuddy | Notes |
-|------|--------------------------|-------|
-| `explorer` | **Explore** sub-agent (read-only) | recon with file:line; output goes to `spec.md` Background (orchestrator **replaces** the placeholder) |
-| `implementer` | **general-purpose** sub-agent | implementation + tests + gates; checks off tasks with pasted gate output |
-| `reviewer` | **general-purpose** sub-agent with the reviewer dispatch prompt | graded findings land in the `## Review` section |
+| Role | Probe | If absent |
+|------|-------|-----------|
+| `explorer` | **Explore** sub-agent (read-only) | inline; output still replaces the `spec.md` Background placeholder |
+| `implementer` | **general-purpose** sub-agent | inline; still checks off tasks with pasted gate output |
+| `reviewer` | **general-purpose** + reviewer dispatch prompt | inline; graded findings still land in `## Review` |
 
-> If a sub-agent type is not registered in the session → degrade to the generic agent or inline execution; responsibilities and output contracts stay unchanged. Dispatch prompts are role discipline + task pointer only — context flows through the artifacts, which the sub-agent reads itself (Agent tool has no shared-memory shortcut by design).
+> Sub-agents run in an isolated context with no shared-memory shortcut — dispatch prompts carry a task pointer + role discipline only, and the sub-agent reads the artifacts itself.
 
-## 4. Degradation Rule Declarations
+## 4. Runtime Probe Checklist
 
-| Missing capability | Degradation behavior in WorkBuddy | Annotation |
-|--------------------|-----------------------------------|------------|
-| `ask_user` (headless / non-interactive run) | pick the most conservative option (fewest irreversible side effects) and record it; never pretend the user confirmed | `⚠️ unable to ask the user; decided on the conservative option` |
-| `spawn_agent` | the orchestrator executes roles inline | `no sub-agent, inline execution` |
-| `create_branch` | change directly on the main workspace | `not isolated (no branch capability)` |
-| `check_command` | run once via Bash | none |
-| `find_skill` | context-first per SKILL.md §7; no library at all → record `skill library unavailable` | environment flag when absent |
-| `web_search` | record `not verified online` in spec Assumptions | none |
-| Other (required capability missing) | fall back to a plain editing session; continue per the degradation rules | mark "unsupported capabilities" at the top of the adapter layer |
+> Run once at session start, before the first command. This is a runtime probe, never a build-time claim — the adapter is not "verified against version X".
 
-## 5. Permission Notes for the Validation Scripts
+- [ ] `read` / `write` / `edit` / `glob` / `grep` / `run_command` resolvable — otherwise stop and mark "unsupported capabilities"
+- [ ] which shell owns the gate entrypoint — Bash or PowerShell? decide once (§0 rule 3)
+- [ ] `spawn_agent` present? absent → inline (§3)
+- [ ] `ask_user` available (interactive run)? absent → conservative option + annotation
+- [ ] `web_search` enabled? absent → record `not verified online`
+- [ ] gate `<entrypoint>` already approved? if not, approve it (§0) **before** running any gate
 
-> WorkBuddy prompts for command permissions on first use; no repo-shipped permission file exists for it (`opencode.json` / `.claude/settings.json` cover the other two harnesses). When the skill is installed into a target project, approve `python scripts/artifact-check.py*`, `python scripts/derive-report.py*` and `python scripts/find-skill.py*` on first run or add equivalent allow rules in the session's permission settings if the surface provides one — never widen the allowlist beyond the three runtime scripts.
+Record every failed probe as a deviation instead of silently taking the fallback.
 
-## 6. Capability-Contract Consistency Self-Check
-
-| Required capability | Implementation in WorkBuddy | Status |
-|---------------------|------------------------------|--------|
-| read / write / edit / glob / grep | §1 table (Read / Write / Edit / Glob / Grep) | ☑ |
-| run_command | §1 table (Bash / PowerShell) | ☑ |
-| ask_user | §1 table (AskUserQuestion, batch native) | ☑ |
-
-## 7. Known Deviations
+## 5. Known Deviations
 
 | Contract semantics | WorkBuddy reality | Handling |
 |--------------------|-------------------|----------|
-| `read` on a directory returns an entry list | the Read tool errors on directories | directory listing via **Glob**; `read` semantics narrowed to files only |
-| Artifacts are the only task state | WorkBuddy offers native task tools (TaskCreate / TaskUpdate / TaskList) | the harness task list may *mirror* progress for the user, but **never** becomes the source of truth — checkboxes in `tasks.md` / `intent.md` stay canonical; on recovery, read the artifacts, not the task list |
-| `find_skill` resolution | native **Skill** tool + **ToolSearch** for deferred-tool discovery | context-first order: Skill / ToolSearch → `scripts/find-skill.py` probe (which already scans `~/.workbuddy/skills` in DEFAULT_ROOTS) → static table (SKILL.md §7) |
-| Sandbox on `run_command` | Bash runs sandboxed; some commands need explicit user-approved escalation | escalation counts as an `ask_user` decision and is recorded; never escalate to bypass a failed gate |
+| `read` on a directory returns an entry list | **Read** errors on directories | **Glob** for entry lists; `read` narrowed to files |
+| artifacts are the only task state | native Task tools exist and look authoritative | artifacts stay canonical; on recovery read `tasks.md`, not the task list |
+| `run_command` is one channel | Bash **and** PowerShell, with different sandbox behavior | one shell per project (§0 rule 3); escalation is a recorded `ask_user` decision |
+| validation-script permissions | no repo-shipped permission file; prompts on first use | approve the three scripts once per session, or add allow rules if the surface offers them |
 
-> If a deviation becomes blocking for a required capability, annotate "unsupported capabilities" at the top of this file and continue per the degradation rules — never invent a mapping.
+> A deviation that blocks a required capability is annotated at the top of this file and handled by the capability's fallback column — never invented away.

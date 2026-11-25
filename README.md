@@ -49,6 +49,8 @@ harness-coding/
 ├── SKILL.md                    # 方法论主体
 ├── references/
 │   ├── capability-contract.md  # 能力契约（7 必需 + 5 可选）
+│   ├── flow.md                 # 通道流转细则（通道选择 / 澄清门 / 延续 / 收尾复验）
+│   ├── conditional-skills.md   # 条件技能静态表（find_skill 未命中时的兜底）
 │   ├── adapters/               # 适配器（claude-code / codex / opencode / workbuddy / _template）
 │   └── templates/              # 产物模板 + 派发模板 + 收尾契约
 ├── scripts/

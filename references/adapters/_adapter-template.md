@@ -1,13 +1,13 @@
 ---
 name: harness-coding-adapter-template
-description: The generic adapter template for harness-coding (v2). When onboarding a new harness, copy this file to references/adapters/<harness>.md and fill in section by section, mapping the capability contract (7 required + 4 mapped optional) to the current harness's concrete tools/primitives, and declaring quality-gate commands, role mapping, and degradation rules. `find_skill` resolves context-first per SKILL.md §7 and needs no adapter mapping. Read before loading harness-coding (SKILL.md prerequisites).
+description: The generic adapter template for harness-coding (v2). When onboarding a new harness, copy this file to references/adapters/<harness>.md and fill in section by section - capability mapping under a probe-first rule (probe order + fallback, never a promise that a tool exists), the single-entrypoint gate command and its pre-approval requirement, role mapping, and the degradation annotation per capability. Mark read tiers so the harness only pays for what it reads. Read lazily — a section at a time, only when a capability mismatch or a gate is actually reached.
 ---
 
 # Adapter Template (for filling in)
 
 > This is the **fill-in template** for the only difference surface between `harness-coding` and an execution harness. The methodology body (SKILL.md) and the capability contract stay unchanged; this file answers exactly one question: **what concrete mechanism does the current harness use to implement each capability in the contract**.
 >
-> After filling it in, keep this file as the current harness's adapter layer under `references/adapters/<harness>.md`.
+> **Probe-first, never assert.** Every mapping is a probe order plus a fallback. A tool name written here is a hint about what to try, never a claim that it exists in this session.
 
 ---
 
@@ -15,68 +15,77 @@ description: The generic adapter template for harness-coding (v2). When onboardi
 
 1. Copy this file to `references/adapters/<harness>.md` (the filename identifies the harness)
 2. Replace the placeholder content section by section (every "fill-in" cell), then delete this section
-3. Self-check against §5: each of the **7 required capabilities** has an implementation
+3. Add the read-tier line: §0–§1 before the first command, §2 at the first gate, §3 at dispatch, §4–§5 as reference — nothing else is read at load
 4. Run one lightweight requirement end-to-end (e.g. fix a typo): the 🟢 channel must complete **without creating any new file**; then run one 🔴 sample to verify artifacts + `artifact-check.py` pass
 
-## 1. Capability Mapping Table
+## 0. Approval & Command Discipline (read before the first command)
 
-> Map all capabilities one by one (`find_skill` is excluded — it resolves context-first per SKILL.md §7 and needs no mapping); anything that can't be mapped must be honestly marked "unsupported" — never invent one.
+> Why this section exists: an approval that lands mid-session rewrites the harness's world state, which sits near the front of the prompt — the whole prompt prefix then misses cache and the next turn re-bills the entire context at full price. Fill in this section for the target harness; keep it to ≤5 rules.
 
-| Capability | Implementation in this harness | Notes |
-|------------|--------------------------------|-------|
-| `read` | fill-in | read files |
+| Question to answer | Notes |
+|--------------------|-------|
+| Does the harness prompt per **new command prefix**? | if yes, command-string stability is a cost lever, not a style choice |
+| Where is the approval recorded? | if it is written into any prompt-injected state, an approval = a cache reset |
+| Can the gate entrypoint be pre-approved / allowlisted? | record the exact mechanism so the target is ≤3 approvals per session |
+| Does wrapping a command (`<shell> -c "..."`) mint a new prefix? | if yes, ban nesting explicitly |
+| Per-call preamble (encoding / error policy) | bake it into the entrypoint script, never repeat it per command |
+
+## 1. Capability Mapping (probe order → fallback, annotation inline)
+
+> Map all capabilities one by one (`find_skill` is excluded — it resolves context-first per SKILL.md and the adapter carries no skill-loading logic). Anything that can't be probed must be honestly marked "unsupported" — never invent one.
+
+| Capability | Probe order | Fallback + annotation |
+|------------|-------------|-----------------------|
+| `read` | fill-in (native tool → shell) | required, no fallback → mark "unsupported capabilities" |
 | `write` | fill-in | overwrite-write; must read before overwriting |
 | `edit` | fill-in | exact replacement, old must match uniquely |
 | `glob` | fill-in | pattern-match to list paths |
 | `grep` | fill-in | returns matches with file:line |
-| `run_command` | fill-in | the only channel for quality gates |
+| `run_command` | fill-in | required — the only channel for quality gates |
 | `ask_user` | fill-in | batch preferred (questions[] in one round); else serial within one clarification round; headless → conservative option + record |
-| `spawn_agent` | fill-in (optional) | if missing, execute inline per the degradation rules |
-| `create_branch` | fill-in (optional) | if missing, mark "not isolated" |
-| `check_command` | fill-in (optional) | if missing, run once to decide |
-| `find_skill` | fill-in (optional) — context-first per SKILL.md §7; probe fallback `scripts/find-skill.py` | library absent → record `skill library unavailable` in spec Assumptions; no match → static conditional table (SKILL.md §7) |
-| `web_search` | fill-in (optional) | if missing → record `not verified online` in spec Assumptions |
+| `spawn_agent` | fill-in (optional) | inline serial → `no sub-agent, inline execution` |
+| `create_branch` | fill-in (optional) | `not isolated (no branch capability)` |
+| `check_command` | fill-in (optional) | treat as absent |
+| `web_search` | fill-in (optional) | `not verified online` in spec Assumptions |
 
-## 2. Quality-Gate Commands (defined by the project)
+## 2. Quality-Gate Commands — one entrypoint, four verbs
 
-> Four gates in a fixed order: lint → format → type → test. Commands are **project-defined** — replace all four rows per project; the Notes column lists cross-stack examples, never a harness mandate.
+> The project declares **one** entrypoint; the four gates are its verbs. Record the entrypoint once so the command string never drifts between runs (§0).
 
-| Gate | Command | Notes |
-|------|---------|-------|
-| lint | fill-in | Python e.g. `ruff check .`; JS: eslint; Go: gofmt -l |
-| format | fill-in | Python e.g. `ruff format --check .`; JS: prettier --check |
-| type | fill-in | Python e.g. `mypy --strict .`; JS: tsc --noEmit |
-| test | fill-in | Python e.g. `pytest --cov=<module>` (coverage sub-gate enforced only when the project declares a threshold, e.g. `[tool.coverage.report] fail_under`; none declared → plain pass/fail, never invent a number) |
+```text
+<entrypoint> lint      # fill-in
+<entrypoint> format    # check-only by default
+<entrypoint> type      # fill-in
+<entrypoint> test      # optional subset arg
+```
 
-> Full re-run before closing (🟡/🔴 close-out re-verification) is mandatory.
+- Pre-approve `<entrypoint>` (§0) so gate runs never raise an approval prompt.
+- Coverage sub-gate: only when the project declares a threshold; none declared → plain pass/fail, never invent a number.
+- Gate N/A: declare `- GATE-NA(<gate>): <reason + scope>` in spec/intent `Gate Exemptions` and reference it in the task output — `artifact-check.py` enforces the pairing.
+- Full re-run before closing (🟡/🔴 close-out re-verification) is mandatory.
 
 ## 3. Role Mapping (optional `spawn_agent` capability)
 
-| Role | Agent type in this harness | Notes |
-|------|----------------------------|-------|
+| Role | Probe | If absent |
+|------|-------|-----------|
 | `explorer` | fill-in | read-only recon; output → `spec.md` Background (orchestrator **replaces** the placeholder) |
 | `implementer` | fill-in | implementation + tests + gates; checks off tasks with pasted gate output |
 | `reviewer` | fill-in | graded findings → `## Review` section |
 
-> If not registered → degrade to a generic subagent or inline execution in the orchestrator; responsibilities and output contracts stay unchanged.
+> Missing `spawn_agent` degrades to inline execution; responsibilities and output contracts stay unchanged.
 
-## 4. Degradation Rule Declarations
+## 4. Runtime Probe Checklist
 
-| Missing capability | Degradation behavior in this harness | Annotation |
-|--------------------|--------------------------------------|------------|
-| `ask_user` (headless / no interactive primitive) | pick the most conservative option (fewest irreversible side effects) and record it; never pretend the user confirmed | ⚠️ unable to ask the user; decided on the conservative option |
-| `spawn_agent` | fill-in | no sub-agent, inline execution |
-| `create_branch` | fill-in | not isolated (no branch capability) |
-| `check_command` | fill-in | none |
-| `web_search` | fill-in — record `not verified online` in spec Assumptions | none |
-| Other (required capability missing) | fill-in | mark "unsupported capabilities" at the top of the adapter layer |
+> Run once at session start, before the first command. A runtime probe, never a build-time claim — the adapter is not "verified against version X".
 
-## 5. Capability-Contract Consistency Self-Check
+- [ ] required capabilities resolvable — otherwise stop and mark "unsupported capabilities"
+- [ ] optional capabilities: record which are absent, with their annotations
+- [ ] gate `<entrypoint>` already approved? if not, get it pre-approved (§0) **before** running any gate
 
-| Required capability | Implementation in this harness | Status |
-|---------------------|--------------------------------|--------|
-| read / write / edit / glob / grep | §1 table | ☐ |
-| run_command | §1 table | ☐ |
-| ask_user | §1 table | ☐ |
+## 5. Known Deviations
 
-> All checked → the adapter layer is ready; you can run the SKILL.md main flow.
+| Contract semantics | Harness reality | Handling |
+|--------------------|-----------------|----------|
+| fill-in | fill-in | fill-in |
+
+> A deviation that blocks a required capability is annotated at the top of the adapter and handled by that capability's fallback column — never invented away.
